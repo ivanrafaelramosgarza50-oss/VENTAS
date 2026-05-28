@@ -64,11 +64,15 @@ input[type=range]{accent-color:#1a56db}
           Vendedor: <code>vendedor@demo.com</code> / <code>demo123</code><br>
           Admin: <code>admin@demo.com</code> / <code>demo123</code>
         </div>
+        <button onclick="resetApp()" class="w-full text-center text-xs text-gray-400 hover:text-red-500 hover:underline mt-1 py-1 transition">
+          ⚠ Problemas para entrar? Haz clic aquí para restablecer
+        </button>
       </div>
       <div id="aform-reg" class="p-6 space-y-3.5 hidden fi">
         <div><label class="lf">Nombre completo</label><input type="text" id="rg-nombre" placeholder="Tu nombre" class="inf"></div>
         <div><label class="lf">Correo</label><input type="email" id="rg-email" placeholder="correo@email.com" class="inf"></div>
         <div><label class="lf">Contraseña</label><input type="password" id="rg-pass" placeholder="Mínimo 6 caracteres" class="inf"></div>
+        <div><label class="lf">Teléfono WhatsApp *</label><input type="tel" id="rg-tel" placeholder="4491234567 (10 dígitos)" class="inf" maxlength="10" pattern="[0-9]{10}"></div>
         <div><label class="lf">Tipo de cuenta</label>
           <select id="rg-rol" class="inf">
             <option value="cliente">🛒 Cliente — Comprar</option>
@@ -198,7 +202,7 @@ input[type=range]{accent-color:#1a56db}
         <i class="fa-solid fa-arrow-left"></i> Volver al catálogo
       </button>
       <div id="det-content"></div>
-           <div id="det-resenas" class="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+      <div id="det-resenas" class="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
         <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2 text-base"><i class="fa-solid fa-star text-yellow-400"></i>Reseñas</h3>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
@@ -321,15 +325,16 @@ input[type=range]{accent-color:#1a56db}
               <div>
                 <label class="lf">Fotos del producto (máx. 5)</label>
                 <div class="grid grid-cols-2 gap-2">
-                  <label class="flex items-center justify-center h-14 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 gap-2 transition">
+                  <button type="button" onclick="abrirCamara()" class="flex items-center justify-center h-14 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 gap-2 transition w-full">
                     <i class="fa-solid fa-camera text-gray-400"></i><span class="text-sm text-gray-500 font-medium">Cámara</span>
-                    <input type="file" accept="image/*" capture="environment" onchange="addFotos(this)" class="hidden">
-                  </label>
+                  </button>
                   <label class="flex items-center justify-center h-14 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 gap-2 transition">
                     <i class="fa-solid fa-image text-gray-400"></i><span class="text-sm text-gray-500 font-medium">Galería</span>
-                    <input type="file" accept="image/*" multiple onchange="addFotos(this)" class="hidden">
+                    <input type="file" id="input-galeria" accept="image/*" multiple onchange="addFotos(this)" class="hidden">
                   </label>
                 </div>
+                <!-- Input cámara oculto (separado para forzar capture) -->
+                <input type="file" id="input-camara" accept="image/*" capture="environment" onchange="addFotos(this)" class="hidden">
                 <div id="fotos-prev" class="flex gap-2 mt-2.5 overflow-x-auto ns"></div>
               </div>
               <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
@@ -535,6 +540,57 @@ input[type=range]{accent-color:#1a56db}
   </div>
 </div>
 
+
+<!-- MODAL CONFIRMACIÓN DE VENTA (CANDADO VENDEDOR) -->
+<div id="modal-venta" class="fixed inset-0 bk z-50 flex items-center justify-center hidden p-4">
+  <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden fi">
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-5 text-white">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-lock text-white text-lg"></i>
+        </div>
+        <div>
+          <h3 class="font-black text-lg">Confirmar Pedido</h3>
+          <p class="text-blue-200 text-xs">El vendedor validará tu solicitud por WhatsApp</p>
+        </div>
+      </div>
+    </div>
+    <div class="p-5 space-y-4">
+      <!-- Folio -->
+      <div class="bg-gray-50 rounded-xl p-3.5 border border-gray-200">
+        <p class="text-xs text-gray-500 uppercase font-bold mb-1">Folio de transacción</p>
+        <p class="text-lg font-black text-blue-600 tracking-wider" id="venta-folio">—</p>
+        <p class="text-xs text-gray-400 mt-0.5">Guarda este folio para cualquier duda o aclaración</p>
+      </div>
+      <!-- Resumen pedido -->
+      <div>
+        <p class="text-sm font-bold text-gray-700 mb-2">Resumen del pedido:</p>
+        <div id="venta-resumen" class="space-y-2 max-h-40 overflow-y-auto ns"></div>
+      </div>
+      <!-- Total -->
+      <div class="flex justify-between items-center bg-blue-50 rounded-xl px-4 py-3 border border-blue-100">
+        <span class="font-bold text-gray-800">Total:</span>
+        <span class="text-xl font-black text-blue-600" id="venta-total">$0</span>
+      </div>
+      <!-- Aviso candado -->
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex gap-3">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-base mt-0.5 flex-shrink-0"></i>
+        <div class="text-sm text-amber-800 leading-relaxed">
+          <strong class="block mb-0.5">¿Cómo funciona?</strong>
+          Tu pedido se enviará al vendedor por WhatsApp. El stock <strong>no se descuenta</strong> hasta que el vendedor confirme la venta. Si no recibes respuesta en 24h, el pedido se cancela automáticamente.
+        </div>
+      </div>
+      <!-- Botones -->
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button onclick="cancelarVenta()" class="bg-gray-100 text-gray-700 font-bold py-3 rounded-xl text-sm hover:bg-gray-200">Cancelar</button>
+        <button onclick="enviarPedidoWA()" class="bg-green-500 text-white font-bold py-3 rounded-xl text-sm hover:bg-green-600 flex items-center justify-center gap-2 shadow-lg">
+          <i class="fa-brands fa-whatsapp text-base"></i> Enviar por WA
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="tw"><div id="toast" class="hidden"><div id="ti" class="bg-gray-900 text-white text-sm font-semibold px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2"><i id="t-ico" class="fa-solid fa-check-circle text-green-400"></i><span id="t-msg">Listo</span></div></div></div>
 
@@ -542,14 +598,14 @@ input[type=range]{accent-color:#1a56db}
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  EmprendeMall V3.0 — Módulo de datos globales               ║
 // ╚══════════════════════════════════════════════════════════════╝
-const ST={INV:'EM3_inv',USR:'EM3_usr',SES:'EM3_ses',CATS:'EM3_cats',DRAF:'EM3_draf'};
+  const ST={INV:'EM3_inv',USR:'EM3_usr',SES:'EM3_ses',CATS:'EM3_cats',DRAF:'EM3_draf'};
 let productos=[],carrito=[],fotosTemp=[],usuario=null,favs=new Set(),catActual='todos',pMin=0,pMax=9999,varIdx=0;
 
 // ── Categorías con subcategorías y atributos dinámicos ─────────
 const CATS_BASE=[
   {id:'tecnologia',nombre:'Tecnología',icon:'fa-microchip',subs:['Celulares','Laptops','Computadoras','Tablets','Smartwatch','Audio','Accesorios','Videojuegos','Consolas','Componentes PC'],attrs:[{id:'ram',label:'RAM',tipo:'sel',ops:['2GB','4GB','8GB','16GB','32GB','No aplica']},{id:'almacenamiento',label:'Almacenamiento',tipo:'sel',ops:['64GB','128GB','256GB','512GB','1TB','No aplica']},{id:'modelo',label:'Modelo',tipo:'txt'}]},
   {id:'moda',nombre:'Moda',icon:'fa-shirt',subs:['Hombre','Mujer','Infantil','Calzado','Bolsas','Relojes','Accesorios','Gorras'],attrs:[{id:'talla',label:'Talla',tipo:'sel',ops:['XS','S','M','L','XL','XXL','Unitalla']},{id:'color',label:'Color',tipo:'sel',ops:['Negro','Blanco','Gris','Rojo','Azul','Verde','Rosa','Café','Multicolor','Otro']}]},
-  {id:'calzado',nombre:'Calzado',icon:'fa-shoe-prints',subs:['Hombre','Mujer','Infantil','Deportivo','Formal','Casual'],attrs:[{id:'numero',label:'Número',tipo:'sel',ops:['15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']},{id:'color',label:'Color',tipo:'sel',ops:['Negro','Blanco','Café','Gris','Azul','Rojo','Multicolor','Otro']}]},
+  {id:'calzado',nombre:'Calzado',icon:'fa-shoe-prints',subs:['Hombre','Mujer','Infantil','Deportivo','Formal','Casual'],attrs:[{id:'numero',label:'Número',tipo:'sel',ops:['9','9½','10','10½','11','11½','12','12½','13','13½','14','14½','15','15½','16','16½','17','17½','18','18½','19','19½','20','20½','21','21½','22','22½','23','23½','24','24½','25','25½','26','26½','27','27½','28','28½','29','29½','30','30½','31','31½','32','32½','33','33½','34','34½','35','35½','36','36½','37','37½','38','38½','39','39½','40','40½','41','41½','42','42½','43','43½','44','44½','45','46','47','48']},{id:'color',label:'Color',tipo:'sel',ops:['Negro','Blanco','Café','Gris','Azul','Rojo','Multicolor','Otro']}]},
   {id:'hogar',nombre:'Hogar',icon:'fa-house',subs:['Muebles','Cocina','Decoración','Electrodomésticos','Jardín','Organización'],attrs:[{id:'material',label:'Material',tipo:'txt'},{id:'dim',label:'Dimensiones',tipo:'txt'}]},
   {id:'vehiculos',nombre:'Vehículos',icon:'fa-car',subs:['Autos','Motocicletas','Bicicletas','Refacciones','Accesorios','Audio automotriz'],attrs:[{id:'marca',label:'Marca',tipo:'txt'},{id:'modelo_v',label:'Modelo/Año',tipo:'txt'},{id:'compat',label:'Compatibilidad',tipo:'txt'}]},
   {id:'herramientas',nombre:'Herramientas y Construcción',icon:'fa-screwdriver-wrench',subs:['Herramientas eléctricas','Herramientas manuales','Ferretería','Pintura','Material eléctrico','Construcción'],attrs:[{id:'marca',label:'Marca',tipo:'txt'},{id:'voltaje',label:'Voltaje',tipo:'sel',ops:['110V','220V','Batería','No aplica']}]},
@@ -571,8 +627,34 @@ const DEMO_PRODS=[
   {id:801,vendedorId:'u_v',vendedorNombre:'Calzado León',titulo:'Tenis Ejecutivos Confort Urban',catId:'calzado',sub:'Deportivo',attrs:{numero:'27',color:'Negro'},variantes:[],mod:'Menudeo',minMay:1,seg:'Hombre',desc:'Suela ortopédica ligera y transpirable. Ideal para el día a día.',precio:1200,tipoPrecio:'regular',dpct:0,precioFinal:1200,wa:'4491234567',pago:'Ambos',stock:15,vendidos:4,comentarios:[],logistica:'ENGO',engo:{peso:0.8,largo:32,ancho:20,alto:14,ciudad:'Aguascalientes',tipo:'ENGO'},fotos:['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=60'],visible:true,expira:Date.now()+20*864e5,pausado:false,viz:87,cliWA:12},
   {id:802,vendedorId:'u_v',vendedorNombre:'Textiles del Centro',titulo:'Lote Playeras Algodón Premium',catId:'moda',sub:'Hombre',attrs:{talla:'M',color:'Gris'},variantes:[{nombre:'Talla S',stock:20},{nombre:'Talla M',stock:40},{nombre:'Talla L',stock:30}],mod:'Mayoreo',minMay:6,seg:'Unisex',desc:'Algodón peinado para serigrafía. Colores firmes al lavado.',precio:120,tipoPrecio:'pct',dpct:15,precioFinal:102,wa:'4491112233',pago:'Transferencia',stock:120,vendidos:30,comentarios:[],logistica:'Ambos',engo:{peso:0.2,largo:25,ancho:20,alto:2,ciudad:'Aguascalientes',tipo:'Ambos'},fotos:['https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop&q=60'],visible:true,expira:Date.now()+5*864e5,pausado:false,viz:203,cliWA:31},
   {id:803,vendedorId:'u_v',vendedorNombre:'Granja Hidrocálido',titulo:'Café Orgánico Gourmet Molido',catId:'alimentos',sub:'Bebidas',attrs:{peso_c:'1Kg'},variantes:[],mod:'Granel',minMay:1,seg:'Unisex',desc:'Notas achocolatadas. Molido medio para prensa francesa.',precio:280,tipoPrecio:'regular',dpct:0,precioFinal:280,wa:'4495556677',pago:'Efectivo',stock:20,vendidos:8,comentarios:[],logistica:'ENGO',engo:{peso:1,largo:20,ancho:15,alto:8,ciudad:'Aguascalientes',tipo:'ENGO'},fotos:['https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&auto=format&fit=crop&q=60'],visible:false,expira:Date.now()-2*864e5,pausado:false,viz:145,cliWA:19},
-  {id:804,vendedorId:'u_v',vendedorNombre:'Skincare & Organics',titulo:'Sérum Facial Ácido Hialurónico',catId:'salud',sub:'Cuidado facial',attrs:{volumen:'50ml',tipo_piel:'Todos'},variantes:[],mod:'Artesanal',m
-   document.getElementById('aform-'+t).classList.remove('hidden');
+  {id:804,vendedorId:'u_v',vendedorNombre:'Skincare & Organics',titulo:'Sérum Facial Ácido Hialurónico',catId:'salud',sub:'Cuidado facial',attrs:{volumen:'50ml',tipo_piel:'Todos'},variantes:[],mod:'Artesanal',minMay:1,seg:'Mujer',desc:'Rápida absorción con vitamina E. Ingredientes limpios.',precio:450,tipoPrecio:'remate',dpct:0,precioFinal:320,wa:'4498889900',pago:'Ambos',stock:5,vendidos:14,comentarios:[{nombre:'Laura M.',stars:5,texto:'Excelente, muy suave!',f:Date.now()-3*864e5},{nombre:'Ana P.',stars:4,texto:'Muy buena calidad.',f:Date.now()-7*864e5}],logistica:'Acuerdo',engo:{peso:0.15,largo:8,ancho:5,alto:5,ciudad:'Aguascalientes',tipo:'Acuerdo'},fotos:['https://images.unsplash.com/photo-1608248597481-496100c8c836?w=600&auto=format&fit=crop&q=60'],visible:true,expira:Date.now()+15*864e5,pausado:false,viz:312,cliWA:45},
+  {id:805,vendedorId:'u_v',vendedorNombre:'Deportes Hidro',titulo:'Kit Bandas Resistencia Fitness 5 Niveles',catId:'deportes',sub:'Gimnasio',attrs:{talla:'Unitalla',material:'Látex natural'},variantes:[{nombre:'Pack Básico (3)',stock:20},{nombre:'Pack Completo (5)',stock:15}],mod:'Menudeo',minMay:1,seg:'Unisex',desc:'5 niveles de resistencia. Bolsa incluida.',precio:350,tipoPrecio:'regular',dpct:0,precioFinal:350,wa:'4490001122',pago:'Ambos',stock:35,vendidos:22,comentarios:[],logistica:'ENGO',engo:{peso:0.5,largo:25,ancho:20,alto:8,ciudad:'Aguascalientes',tipo:'ENGO'},fotos:['https://images.unsplash.com/photo-1598289431512-b97b0917affc?w=600&auto=format&fit=crop&q=60'],visible:true,expira:Date.now()+28*864e5,pausado:false,viz:98,cliWA:14},
+  {id:806,vendedorId:'u_v',vendedorNombre:'Tech Ags',titulo:'Laptop Core i5 12va Gen 8GB RAM 256GB SSD',catId:'tecnologia',sub:'Laptops',attrs:{ram:'8GB',almacenamiento:'256GB',modelo:'Core i5-1235U'},variantes:[{nombre:'8GB RAM',stock:5},{nombre:'16GB RAM',stock:3}],mod:'Menudeo',minMay:1,seg:'Unisex',desc:'Ideal para trabajo y estudio. Pantalla Full HD 15.6".',precio:8500,tipoPrecio:'regular',dpct:0,precioFinal:8500,wa:'4494445566',pago:'Ambos',stock:8,vendidos:3,comentarios:[],logistica:'ENGO',engo:{peso:2.1,largo:37,ancho:25,alto:3,ciudad:'Aguascalientes',tipo:'ENGO'},fotos:['https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&auto=format&fit=crop&q=60'],visible:true,expira:Date.now()+25*864e5,pausado:false,viz:156,cliWA:22},
+  {id:807,vendedorId:'u_v',vendedorNombre:'Auto Parts Ags',titulo:'Refacción Filtro de Aceite Universal Premium',catId:'vehiculos',sub:'Refacciones',attrs:{marca:'Universal',modelo_v:'2010-2023',compat:'Nissan/Toyota/Honda'},variantes:[],mod:'Menudeo',minMay:1,seg:'Unisex',desc:'Compatible con múltiples modelos. Fácil instalación.',precio:185,tipoPrecio:'regular',dpct:0,precioFinal:185,wa:'4497778899',pago:'Efectivo',stock:50,vendidos:18,comentarios:[],logistica:'ENGO',engo:{peso:0.3,largo:15,ancho:15,alto:10,ciudad:'Aguascalientes',tipo:'ENGO'},fotos:['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&auto=format&fit=crop&q=60'],visible:true,expira:Date.now()+18*864e5,pausado:false,viz:74,cliWA:9}
+];
+
+// ── Persistencia ─────────────────────────────────────────────
+const saveInv =()=>localStorage.setItem(ST.INV,JSON.stringify(productos));
+const loadInv =()=>{const d=localStorage.getItem(ST.INV);return d?JSON.parse(d):null;};
+const getUsers=()=>{const d=localStorage.getItem(ST.USR);return d?JSON.parse(d):[...DEMO_USERS];};
+const saveUsers=(u)=>localStorage.setItem(ST.USR,JSON.stringify(u));
+const getSes  =()=>{const d=localStorage.getItem(ST.SES);return d?JSON.parse(d):null;};
+const saveSes =(u)=>localStorage.setItem(ST.SES,JSON.stringify(u));
+const clearSes=()=>localStorage.removeItem(ST.SES);
+const getDrafts=()=>{const d=localStorage.getItem(ST.DRAF);return d?JSON.parse(d):[];};
+const saveDrafts=(ds)=>localStorage.setItem(ST.DRAF,JSON.stringify(ds));
+
+// ── Helpers categorías ─────────────────────────────────────────
+function getCats(){const d=localStorage.getItem(ST.CATS);return d?JSON.parse(d):[...CATS_BASE];}
+function saveCats(c){localStorage.setItem(ST.CATS,JSON.stringify(c));}
+function getCatById(id){return getCats().find(c=>c.id===id)||null;}
+
+// ══════════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════════
+function authTab(t){
+  ['login','reg','rec'].forEach(x=>document.getElementById('aform-'+x).classList.add('hidden'));
+  document.getElementById('aform-'+t).classList.remove('hidden');
   ['login','reg'].forEach(x=>{const b=document.getElementById('atab-'+x);if(!b)return;b.classList.remove('ton','text-blue-600');b.classList.add('text-gray-400');});
   if(t==='login'||t==='reg'){const b=document.getElementById('atab-'+t);b.classList.add('ton','text-blue-600');b.classList.remove('text-gray-400');}
 }
@@ -581,23 +663,30 @@ function doLogin(){
   const email=document.getElementById('li-email').value.trim().toLowerCase();
   const pass=document.getElementById('li-pass').value;
   if(!email||!pass){toast('Completa todos los campos','err');return;}
+  // Inicializar usuarios demo si es primera vez
   if(!localStorage.getItem(ST.USR))saveUsers([...DEMO_USERS]);
   const u=getUsers().find(x=>x.email===email&&x.password===pass);
   if(!u){toast('Correo o contraseña incorrectos','err');return;}
+  // Asegurar que el usuario tenga todos los campos necesarios
+  if(!u.histCred)u.histCred=[];
+  if(!u.favoritos)u.favoritos=[];
+  if(u.creditos===undefined)u.creditos=0;
   usuario=u;saveSes(u);startApp();
 }
 function doReg(){
   const nombre=document.getElementById('rg-nombre').value.trim();
   const email=document.getElementById('rg-email').value.trim().toLowerCase();
   const pass=document.getElementById('rg-pass').value;
+  const tel=document.getElementById('rg-tel').value.trim();
   const rol=document.getElementById('rg-rol').value;
-  if(!nombre||!email||!pass){toast('Completa todos los campos','err');return;}
+  if(!nombre||!email||!pass||!tel){toast('Completa todos los campos obligatorios','err');return;}
+  if(!/^[0-9]{10}$/.test(tel)){toast('Teléfono debe tener 10 dígitos','err');return;}
   if(pass.length<6){toast('Contraseña mínimo 6 caracteres','err');return;}
   const us=getUsers();
   if(us.find(x=>x.email===email)){toast('Correo ya registrado','err');return;}
-  const nu={id:'u_'+Date.now(),email,password:pass,nombre,rol,creditos:0,favoritos:[],histCred:[]};
+  const nu={id:'u_'+Date.now(),email,password:pass,nombre,tel,rol,creditos:0,favoritos:[],histCred:[]};
   us.push(nu);saveUsers(us);usuario=nu;saveSes(nu);
-  toast('¡Bienvenido a EmprendeMall!');startApp();
+  startApp();setTimeout(()=>toast('¡Bienvenido a EmprendeMall!'),300);
 }
 function doRecuperar(){
   if(!document.getElementById('rc-email').value.trim())return;
@@ -614,18 +703,39 @@ function doLogout(){
 // INICIALIZACIÓN
 // ══════════════════════════════════════════════════════════════
 function startApp(){
-  document.getElementById('pantalla-auth').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  const inv=loadInv();
-  productos=inv||[...DEMO_PRODS];
-  if(!inv)saveInv();
-  checkExpiry();
-  setupUI();
-  const us=getUsers().find(x=>x.id===usuario.id);
-  favs=new Set((us?.favoritos||[]).map(String));
-  updateFavBadge();
-  buildCatChips();
-  goTo('cat');
+  // Limpiar claves de versiones anteriores (V1/V2) para evitar conflictos
+  ['EM_inventario_v2','EM_usuarios_v2','EM_sesion_v2','EM_categorias_v2',
+   'EM_inventario','EM_usuarios','EM_sesion','EM_metricas_v2'].forEach(k=>{
+    if(localStorage.getItem(k))localStorage.removeItem(k);
+  });
+
+  // Validar que el usuario tenga estructura correcta
+  if(!usuario||!usuario.id||!usuario.email){
+    clearSes();usuario=null;
+    document.getElementById('pantalla-auth').classList.remove('hidden');
+    return;
+  }
+
+  try{
+    document.getElementById('pantalla-auth').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    const inv=loadInv();
+    productos=inv||[...DEMO_PRODS];
+    if(!inv)saveInv();
+    checkExpiry();
+    setupUI();
+    const us=getUsers().find(x=>x.id===usuario.id);
+    favs=new Set((us?.favoritos||[]).map(String));
+    updateFavBadge();
+    buildCatChips();
+    goTo('cat');
+  }catch(err){
+    console.error('[EM V3] startApp error:',err);
+    clearSes();usuario=null;
+    document.getElementById('pantalla-auth').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    alert('Error al cargar la sesión. Por favor inicia sesión nuevamente.');
+  }
 }
 
 function checkExpiry(){
@@ -771,32 +881,6 @@ function renderCat(datos){
     const prom=p.comentarios?.length?(p.comentarios.reduce((s,c)=>s+(c.stars||0),0)/p.comentarios.length).toFixed(1):null;
     const attrsStr=Object.values(p.attrs||{}).filter(Boolean).slice(0,2).join(' · ');
     grid.innerHTML+=`<div class="card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col cursor-pointer" onclick="openDet(${p.id})">
-    const mq=!q||(p.titulo||'').toLowerCase().includes(q)||(p.desc||'').toLowerCase().includes(q)||(p.vendedorNombre||'').toLowerCase().includes(q);
-    const mp=p.precioFinal>=pMin&&p.precioFinal<=pMax;
-    return mc&&ms&&mm&&mg&&mq&&mp;
-  });
-  if(ord==='vis')res.sort((a,b)=>(b.viz||0)-(a.viz||0));
-  else if(ord==='pl')res.sort((a,b)=>a.precioFinal-b.precioFinal);
-  else if(ord==='ph')res.sort((a,b)=>b.precioFinal-a.precioFinal);
-  else res.sort((a,b)=>b.id-a.id);
-  const inf=document.getElementById('cat-info');
-  if(q||sub||mod||seg||ord!=='rec'||catActual!=='todos'){inf.textContent=`${res.length} resultado${res.length!==1?'s':''}`;inf.classList.remove('hidden');}
-  else inf.classList.add('hidden');
-  renderCat(res);
-}
-function renderCat(datos){
-  const grid=document.getElementById('grid-cat');grid.innerHTML='';
-  if(!datos.length){grid.innerHTML=`<div class="col-span-full text-center py-16"><i class="fa-solid fa-box-open text-gray-200 text-5xl mb-3"></i><p class="text-gray-400 text-base">Sin productos con estos filtros.</p></div>`;return;}
-  datos.forEach(p=>{
-    const foto=p.fotos?.[0]||'';
-    const isFav=favs.has(String(p.id));
-    let badge='',bloque=`<span class="text-base font-black text-gray-900">$${p.precioFinal.toLocaleString('es-MX')}</span>`;
-    if(p.tipoPrecio==='remate'){badge=`<span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-extrabold px-2 py-0.5 rounded-full shadow">REMATE</span>`;bloque=`<span class="text-base font-black text-red-500">$${p.precioFinal.toLocaleString('es-MX')}</span>`;}
-    else if(p.tipoPrecio==='pct'){badge=`<span class="absolute top-2 left-2 bg-green-500 text-white text-xs font-extrabold px-2 py-0.5 rounded-full shadow">${p.dpct}% OFF</span>`;bloque=`<div><span class="text-base font-black text-green-600">$${p.precioFinal.toLocaleString('es-MX')}</span><br><span class="text-xs text-gray-300 line-through">$${p.precio.toLocaleString('es-MX')}</span></div>`;}
-    const agotado=p.stock<=0?`<span class="absolute top-2 right-8 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">AGOTADO</span>`:'';
-    const prom=p.comentarios?.length?(p.comentarios.reduce((s,c)=>s+(c.stars||0),0)/p.comentarios.length).toFixed(1):null;
-    const attrsStr=Object.values(p.attrs||{}).filter(Boolean).slice(0,2).join(' · ');
-    grid.innerHTML+=`<div class="card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col cursor-pointer" onclick="openDet(${p.id})">
       <div class="relative bg-gray-50 overflow-hidden" style="aspect-ratio:1">
         <img src="${foto}" alt="${p.titulo}" class="w-full h-full object-cover" loading="lazy">
         ${badge}${agotado}
@@ -898,7 +982,7 @@ function saveResena(){
   p.comentarios.unshift({nombre:nom,stars:sts,texto:tex,f:Date.now()});
   saveInv();renderResenas(p.comentarios);
   document.getElementById('res-nombre').value='';document.getElementById('res-texto').value='';setStar(5);
-    toast('¡Reseña publicada!');
+  toast('¡Reseña publicada!');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -914,7 +998,7 @@ function toggleFav(id){
 function updateFavBadge(){
   const b=document.getElementById('bdg-fav');if(!b)return;
   b.textContent=favs.size;b.style.display=favs.size>0?'flex':'none';
-}
+  }
 function renderFavs(){
   const grid=document.getElementById('favs-grid');
   const fp=productos.filter(p=>favs.has(String(p.id)));
@@ -992,14 +1076,44 @@ function renderCartItems(){
   calcCartTotals();
 }
 function cancelCart(){if(!confirm('¿Vaciar el carrito?'))return;carrito=[];updateCartBadge();closeCart();}
+
+// ── Pedido pendiente (candado vendedor) ─────────────────────────
+let pedidoPendiente={folio:'',msg:'',total:0,items:[]};
+
 function confirmCart(){
   if(!carrito.length){toast('Carrito vacío','err');return;}
-  let msg=`🛒 *PEDIDO EmprendeMall V3*\n${new Date().toLocaleString('es-MX')}\n\n`;let total=0;
-  carrito.forEach(it=>{const p=productos.find(x=>x.id===it.id);if(!p)return;msg+=`▪ ${p.titulo} x${it.qty} = $${(p.precioFinal*it.qty).toLocaleString('es-MX')}\n`;p.stock=Math.max(0,p.stock-it.qty);p.vendidos=(p.vendidos||0)+it.qty;total+=p.precioFinal*it.qty;});
-  msg+=`\n*Total: $${total.toLocaleString('es-MX')} MXN*\n_Logística: ENGO Express_`;
-  saveInv();carrito=[];updateCartBadge();closeCart();applyFilters();
-  toast('¡Compra procesada! Abriendo WhatsApp...');
-  setTimeout(()=>window.open(`https://wa.me/4491234567?text=${encodeURIComponent(msg)}`,'_blank'),800);
+  const folio='EM-'+Date.now().toString(36).toUpperCase().slice(-8);
+  const fecha=new Date().toLocaleString('es-MX');
+  let msg=`🛒 *PEDIDO EmprendeMall V3*\n📋 Folio: *${folio}*\n📅 ${fecha}\n\n`;
+  let total=0;const resumen=[];
+  carrito.forEach(it=>{
+    const p=productos.find(x=>x.id===it.id);if(!p)return;
+    const sub=p.precioFinal*it.qty;
+    msg+=`▪ ${p.titulo} x${it.qty} = $${sub.toLocaleString('es-MX')}\n`;
+    total+=sub;
+    resumen.push({titulo:p.titulo,vendedor:p.vendedorNombre,qty:it.qty,sub,wa:p.wa,foto:p.fotos?.[0]||''});
+  });
+  msg+=`\n*Total: $${total.toLocaleString('es-MX')} MXN*\n_Logística: ENGO Express_\n\n⚠️ Pedido pendiente de confirmación por el vendedor.`;
+  pedidoPendiente={folio,msg,total,items:resumen};
+  // Poblar modal
+  document.getElementById('venta-folio').textContent=folio;
+  document.getElementById('venta-total').textContent=`$${total.toLocaleString('es-MX')}`;
+  document.getElementById('venta-resumen').innerHTML=resumen.map(r=>`<div class="flex items-center gap-2.5 bg-gray-50 rounded-xl p-2.5"><img src="${r.foto}" class="w-10 h-10 object-cover rounded-lg flex-shrink-0 border border-gray-100"><div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">${r.titulo}</p><p class="text-xs text-gray-400">${r.vendedor} · x${r.qty}</p></div><span class="text-sm font-black text-blue-600 flex-shrink-0">$${r.sub.toLocaleString('es-MX')}</span></div>`).join('');
+  closeCart();
+  document.getElementById('modal-venta').classList.remove('hidden');
+}
+function cancelarVenta(){
+  document.getElementById('modal-venta').classList.add('hidden');
+  pedidoPendiente={folio:'',msg:'',total:0,items:[]};
+}
+function enviarPedidoWA(){
+  if(!pedidoPendiente.folio){toast('Sin pedido pendiente','err');return;}
+  const wa=pedidoPendiente.items[0]?.wa||'4491234567';
+  document.getElementById('modal-venta').classList.add('hidden');
+  carrito=[];updateCartBadge();applyFilters();
+  toast(`¡Pedido ${pedidoPendiente.folio} enviado! El vendedor confirmará.`);
+  setTimeout(()=>window.open(`https://wa.me/52${wa}?text=${encodeURIComponent(pedidoPendiente.msg)}`,'_blank'),600);
+  pedidoPendiente={folio:'',msg:'',total:0,items:[]};
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1076,6 +1190,15 @@ function calcPrecio(){
   else prev.classList.add('hidden');
 }
 
+// ── Cámara: forzar apertura de cámara nativa en móvil ──────────
+function abrirCamara(){
+  const inp=document.getElementById('input-camara');
+  if(!inp)return;
+  // Resetear para permitir la misma foto 2 veces
+  inp.value='';
+  inp.click();
+                             }
+  
 // ── Imágenes con compresión automática ─────────────────────────
 function addFotos(input){
   [...input.files].forEach(file=>{
@@ -1098,7 +1221,7 @@ function rmFoto(i){fotosTemp.splice(i,1);renderFotosPrev();}
 function renderFotosPrev(){
   const c=document.getElementById('fotos-prev');if(!c)return;
   c.innerHTML=fotosTemp.map((f,i)=>`<div class="relative flex-shrink-0"><img src="${f}" class="w-14 h-14 object-cover rounded-xl border border-gray-200"><button onclick="rmFoto(${i})" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold leading-none">&times;</button></div>`).join('');
-     }
+}
 
 // ══════════════════════════════════════════════════════════════
 // BORRADORES
@@ -1274,8 +1397,8 @@ function republicar(id){
   u.creditos-=10;u.histCred.unshift({t:'pub',n:-10,f:Date.now(),nota:`Republicación: "${p.titulo}"`});
   saveUsers(us);usuario.creditos=u.creditos;saveSes(usuario);saveInv();updateCredDisplay();renderInv();
   toast('¡Republicado por 30 días más!');
-}
-function pausar(id){const p=productos.find(x=>x.id===id);if(!p)return;p.pausado=!p.pausado;saveInv();renderInv();toast(p.pausado?'Publicación pausada':'Publicación reactivada');}
+      }
+  function pausar(id){const p=productos.find(x=>x.id===id);if(!p)return;p.pausado=!p.pausado;saveInv();renderInv();toast(p.pausado?'Publicación pausada':'Publicación reactivada');}
 function duplicar(id){const p=productos.find(x=>x.id===id);if(!p)return;const c={...JSON.parse(JSON.stringify(p)),id:Date.now(),titulo:`${p.titulo} (Copia)`,visible:false,vendidos:0,comentarios:[]};productos.unshift(c);saveInv();renderInv();toast('Duplicado (inactivo). Edítalo y republica.');}
 function marcarAgotado(id){const p=productos.find(x=>x.id===id);if(!p)return;p.stock=0;saveInv();renderInv();applyFilters();toast('Marcado como agotado');}
 function delProd(id){if(!confirm('¿Eliminar esta publicación?'))return;productos=productos.filter(x=>x.id!==id);saveInv();renderInv();applyFilters();toast('Publicación eliminada');}
@@ -1298,7 +1421,7 @@ function renderUltimasPubs(){
 // ══════════════════════════════════════════════════════════════
 function renderMetricas(){
   const mp=productos.filter(p=>p.vendedorId===usuario.id);
-    document.getElementById('m-viz').textContent=mp.reduce((s,p)=>s+(p.viz||0),0);
+  document.getElementById('m-viz').textContent=mp.reduce((s,p)=>s+(p.viz||0),0);
   document.getElementById('m-wa').textContent=mp.reduce((s,p)=>s+(p.cliWA||0),0);
   document.getElementById('m-vend').textContent=mp.reduce((s,p)=>s+(p.vendidos||0),0);
   document.getElementById('m-act').textContent=mp.filter(p=>estadoPub(p)==='ok').length;
@@ -1475,7 +1598,7 @@ function renderAdmMod(){
   </div>`).join('');
 }
 function admDelUser(uid){if(!confirm('¿Eliminar usuario?'))return;let us=getUsers().filter(u=>u.id!==uid);saveUsers(us);renderAdmUsers();toast('Usuario eliminado');}
-function admDelPub(id){if(!confirm('¿Eliminar publicación?'))return;productos=productos.filter(x=>x.id!==id);saveInv();renderAdmPubs();applyFilters();toast('Publicación eliminada');}
+  function admDelPub(id){if(!confirm('¿Eliminar publicación?'))return;productos=productos.filter(x=>x.id!==id);saveInv();renderAdmPubs();applyFilters();toast('Publicación eliminada');}
 function admDelResena(pId,ci){const p=productos.find(x=>x.id===pId);if(p?.comentarios){p.comentarios.splice(ci,1);saveInv();renderAdmMod();toast('Reseña eliminada');}}
 
 // ══════════════════════════════════════════════════════════════
@@ -1496,52 +1619,90 @@ function toast(msg,tipo='ok'){
   toastT=setTimeout(()=>el.classList.add('hidden'),2800);
 }
 
-// ============================================================
-// MÓDULO: FIREBASE/SUPABASE — PREPARACIÓN PARA MIGRACIÓN
-    // ============================================================
-// Asegúrate de importar los módulos de Firebase al inicio de tu script
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyDhKgxRiWz1LS0iEiMBoLSREQvudCFmbfw",
-    authDomain: "ventas-28674.firebaseapp.com",
-    projectId: "ventas-28674",
-    storageBucket: "ventas-28674.firebasestorage.app",
-    messagingSenderId: "91600476108",
-    appId: "1:91600476108:web:4c41996c806bb6407de5b9",
-    measurementId: "G-4GP5RZXLYM"
+// ══════════════════════════════════════════════════════════════
+// FIREBASE — CONFIGURACIÓN REAL (proyecto: ventas-28674)
+// ══════════════════════════════════════════════════════════════
+// SDK cargado via CDN (compatible con archivos HTML estáticos sin bundler)
+const firebaseConfig={
+  apiKey:"AIzaSyDhKgxRiWz1LS0iEiMBolSREQVudCFmbfw",
+  authDomain:"ventas-28674.firebaseapp.com",
+  projectId:"ventas-28674",
+  storageBucket:"ventas-28674.firebasestorage.app",
+  messagingSenderId:"916004786108",
+  appId:"1:916004786108:web:4c41996c806bb6407de5b9",
+  measurementId:"G-4GP5XRZLYM"
 };
 
-// Objeto de control de base de datos de tu app
-const DB = {
-    ready: false,
-    firestoreInstance: null,
-    
-    init: () => {
-        try {
-            // Inicializar la conexión real con Firebase
-            const app = initializeApp(firebaseConfig);
-            DB.firestoreInstance = getFirestore(app);
-            DB.ready = true;
-            console.log('[EmprendeMall] DB: Conectado exitosamente a Firebase Cloud Firestore.');
-        } catch (error) {
-            console.error('[EmprendeMall] Error al conectar a Firebase:', error);
-            DB.ready = false;
-        }
-    }
+// Estado de conexión Firebase
+const DB={
+  ready:false,
+  app:null,
+  db:null,
+  auth:null,
+  // Inicializar cuando los SDKs estén disponibles
+  init:()=>{
+    try{
+      if(typeof firebase!=='undefined'){
+        DB.app=firebase.initializeApp(firebaseConfig);
+        DB.db=firebase.firestore?firebase.firestore():null;
+        DB.auth=firebase.auth?firebase.auth():null;
+        DB.ready=true;
+        console.log('[EM V3] Firebase conectado ✓ proyecto: ventas-28674');
+      } else {
+        console.log('[EM V3] Firebase SDK no cargado — usando localStorage (modo offline).');
+        console.log('[EM V3] Para activar Firebase, agregar los scripts CDN de Firebase antes del cierre </body>');
+        console.log('[EM V3] Scripts necesarios:');
+        console.log('  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>');
+        console.log('  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>');
+        console.log('  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>');
+      }
+    }catch(e){console.warn('[EM V3] Firebase init error:',e.message);}
+  },
+  // ── Métodos listos para reemplazar localStorage ──────────────
+  // Cuando DB.ready===true, usar estos en lugar de saveInv/loadInv:
+  //
+  // getProductos: async()=>{ const snap=await DB.db.collection('productos').get(); return snap.docs.map(d=>({id:d.id,...d.data()})); },
+  // saveProducto: async(p)=>{ await DB.db.collection('productos').doc(String(p.id)).set(p); },
+  // getUsuario: async(uid)=>{ const doc=await DB.db.collection('usuarios').doc(uid).get(); return doc.exists?doc.data():null; },
+  // saveUsuario: async(u)=>{ await DB.db.collection('usuarios').doc(u.id).set(u); },
+  //
+  // ── Auth Firebase (reemplazar doLogin/doReg cuando esté listo) ─
+  // loginEmail: async(email,pass)=>{ return await DB.auth.signInWithEmailAndPassword(email,pass); },
+  // regEmail: async(email,pass)=>{ return await DB.auth.createUserWithEmailAndPassword(email,pass); },
 };
 
 // ══════════════════════════════════════════════════════════════
 // INICIALIZACIÓN GLOBAL
 // ══════════════════════════════════════════════════════════════
+function resetApp(){
+  if(!confirm('¿Restablecer la aplicación? Se eliminará la sesión y todos los datos locales.'))return;
+  // Limpiar TODAS las claves de EmprendeMall (V1, V2, V3)
+  const keysToRemove=['EM3_inv','EM3_usr','EM3_ses','EM3_cats','EM3_draf',
+    'EM_inventario_v2','EM_usuarios_v2','EM_sesion_v2','EM_categorias_v2','EM_metricas_v2',
+    'EM_inventario','EM_usuarios','EM_sesion'];
+  keysToRemove.forEach(k=>localStorage.removeItem(k));
+  alert('Datos limpiados correctamente. La página se recargará.');
+  location.reload();
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   DB.init();
   if(!localStorage.getItem(ST.USR))saveUsers([...DEMO_USERS]);
 
-  // Restaurar sesión previa
+  // Restaurar sesión previa — con validación de estructura
   const ses=getSes();
-  if(ses){usuario=ses;startApp();}
+  if(ses&&ses.id&&ses.email&&ses.rol){
+    usuario=ses;
+    try{startApp();}
+    catch(e){
+      console.warn('[EM V3] Sesión corrupta, limpiando:',e.message);
+      clearSes();usuario=null;
+    }
+  } else if(ses){
+    // Sesión existe pero estructura inválida (de versión anterior)
+    clearSes();
+    console.log('[EM V3] Sesión antigua eliminada, por favor inicia sesión.');
+  }
 
   // Enter en formularios auth
   [['li-email','li-pass']].forEach(ids=>ids.forEach(id=>{document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});}));
@@ -1567,6 +1728,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('modal-drafts')?.addEventListener('click',e=>{
     if(e.target===document.getElementById('modal-drafts'))closeDrafts();
   });
+  // Backdrop modal venta
+  document.getElementById('modal-venta')?.addEventListener('click',e=>{
+    if(e.target===document.getElementById('modal-venta'))cancelarVenta();
+  });
 
   // Sincronizar buscadores desktop <-> mobile
   document.getElementById('q-desktop')?.addEventListener('input',()=>{
@@ -1577,5 +1742,18 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 });
 </script>
+
+<!-- ══════════════════════════════════════════════════════════
+     FIREBASE SDK — Activar descomentando estas líneas
+     (Ya configurado con el proyecto ventas-28674)
+════════════════════════════════════════════════════════════ -->
+<!--
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
+-->
+
 </body>
 </html>
