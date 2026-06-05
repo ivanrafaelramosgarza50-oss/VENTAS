@@ -2624,7 +2624,7 @@ async function updateCredDisplay(){
 }
 async function addCredits(n){
   const u=await fbGetUser(usuario.id);if(!u)return;
-  const nuevo=Math.min(u.creditos+n,100);const real=nuevo-u.creditos;
+  const nuevo=Math.min(u.creditos+n,300);const real=nuevo-u.creditos;
   if(!real){toast('Ya tienes 100 créditos (máximo)','err');return;}
   const histCred=[{t:'recarga',n:real,f:Date.now(),nota:`Recarga +${real} créditos`},...(u.histCred||[])];
   await fbSaveUser({id:usuario.id,creditos:nuevo,histCred});
