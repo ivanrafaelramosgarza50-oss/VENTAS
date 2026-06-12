@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>EmprendeMall V4.0 — Marketplace Local Aguascalientes</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Firebase SDKs (compat v9 — funciona directo en HTML sin bundler) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+:root{--y:#fff159;--b:#1a56db;--g:#059669;--r:#dc2626}
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.5;padding-bottom:64px;background:#f3f4f6}
+.ns::-webkit-scrollbar{display:none}.ns{-ms-overflow-style:none;scrollbar-width:none}
+.fi{animation:fi .22s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.pu{animation:pu 2s infinite}
+@keyframes pu{0%,100%{transform:scale(1)}50%{transform:scale(1.13)}}
+.ton{border-bottom:2.5px solid #1a56db;color:#1a56db;font-weight:700}
+.tw{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);z-index:9999;pointer-events:none}
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:50;background:#fff;border-top:1px solid #e5e7eb;height:60px}
+.bk{background:rgba(0,0,0,.56);backdrop-filter:blur(3px)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#1a56db!important;box-shadow:0 0 0 3px rgba(26,86,219,.12)}
+.card{transition:transform .18s,box-shadow .18s}.card:active{transform:scale(.97)}
+@media(hover:hover){.card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.10)}}
+.sok{background:#dcfce7;color:#166534}.swn{background:#fef3c7;color:#92400e}.ser{background:#fee2e2;color:#991b1b}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid #e5e7eb;background:#f9fafb;cursor:pointer;transition:.15s;white-space:nowrap}
+.chip.sel{background:#1a56db;color:#fff;border-color:#1a56db}
+.lf{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin-bottom:4px}
+.inf{width:100%;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;background:#fff}
+.imt{width:54px;height:54px;object-fit:cover;border-radius:9px;border:2px solid #e5e7eb;cursor:pointer;flex-shrink:0}
+.imt.on{border-color:#1a56db;box-shadow:0 0 0 2px #bfdbfe}
+input[type=range]{accent-color:#1a56db}
+/* Loading inline pequeño */
+.animate-spin{animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- LOADING INLINE (pequeño, no bloquea pantalla) -->
+<div id="loading-inline" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 shadow-xl">
+  <div class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+  <span id="loading-msg">Cargando...</span>
+</div>
+
+<!-- ===== AUTH ===== -->
+<div id="pantalla-auth" class="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex items-center justify-center p-4">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-7">
+      <div class="inline-flex items-center gap-2 bg-[#fff159] px-6 py-3 rounded-full shadow-xl">
+        <i class="fa-solid fa-bag-shopping text-gray-900 text-xl"></i>
+        <span class="text-xl font-black text-gray-900">EmprendeMall</span>
+      </div>
+      <p class="text-gray-400 text-sm mt-2">Marketplace Local · Aguascalientes · V4</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div class="flex border-b border-gray-100">
+        <button onclick="authTab('login')" id="atab-login" class="flex-1 py-4 text-sm font-bold ton"><i class="fa-solid fa-right-to-bracket mr-1"></i>Entrar</button>
+        <button onclick="authTab('reg')" id="atab-reg" class="flex-1 py-4 text-sm font-semibold text-gray-400"><i class="fa-solid fa-user-plus mr-1"></i>Registro</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="aform-login" class="p-6 space-y-4 fi">
+        <div><label class="lf">Correo electrónico</label><input type="email" id="li-email" placeholder="correo@email.com" class="inf"></div>
+        <div><label class="lf">Contraseña</label>
+          <div class="relative"><input type="password" id="li-pass" placeholder="••••••••" class="inf pr-10">
+          <button onclick="togglePass('li-pass')" class="absolute right-3 top-2.5 text-gray-400"><i class="fa-solid fa-eye text-sm"></i></button></div>
+        </div>
+        <button onclick="doLogin()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl text-sm shadow hover:bg-blue-700 transition">Iniciar sesión</button>
+        <button onclick="authTab('rec')" class="w-full text-center text-sm text-blue-600 hover:underline">¿Olvidaste tu contraseña?</button>
+
+        <!-- Demo accounts (solo modo local) -->
+        <div id="demo-accounts-box" class="hidden bg-blue-50 border border-blue-100 rounded-xl p-3.5 text-sm text-blue-800 leading-relaxed">
+          <strong class="block mb-1"><i class="fa-solid fa-flask mr-1"></i>Cuentas demo (modo local):</strong>
+          Cliente: <code class="bg-white px-1 rounded">cliente@demo.com</code> / <code class="bg-white px-1 rounded">demo123</code><br>
+          Vendedor: <code class="bg-white px-1 rounded">vendedor@demo.com</code> / <code class="bg-white px-1 rounded">demo123</code><br>
+          Admin: <code class="bg-white px-1 rounded">admin@demo.com</code> / <code class="bg-white px-1 rounded">demo123</code>
+        </div>
+        <!-- Compartir app (solo modo online) -->
+        <!-- Banner de error Firebase (oculto, se muestra si hay problemas) -->
+        <div id="firebase-error-box" class="hidden bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-800 leading-relaxed">
+          <strong class="block mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Acción requerida en Firebase:</strong>
+          <span id="firebase-error-msg">—</span>
+        </div>
+        <div id="share-box" class="border-t border-gray-100 pt-3">
+          <p class="text-xs text-gray-400 text-center mb-2.5 font-semibold uppercase tracking-wide">Comparte EmprendeMall</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="compartirWA()" class="flex items-center justify-center gap-2 bg-green-500 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-green-600 transition shadow-sm">
+              <i class="fa-brands fa-whatsapp text-base"></i> WhatsApp
+            </button>
+            <button onclick="compartirFB()" class="flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-blue-700 transition shadow-sm">
+              <i class="fa-brands fa-facebook text-base"></i> Facebook
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- REGISTRO -->
+      <div id="aform-reg" class="p-6 space-y-3.5 hidden fi">
+        <div><label class="lf">Nombre completo *</label><input type="text" id="rg-nombre" placeholder="Tu nombre" class="inf"></div>
+        <div><label class="lf">Correo electrónico *</label><input type="email" id="rg-email" placeholder="correo@email.com" class="inf"></div>
+        <div><label class="lf">Teléfono WhatsApp *</label><input type="tel" id="rg-tel" placeholder="4491234567 (10 dígitos)" class="inf" maxlength="10"></div>
+        <div><label class="lf">Contraseña *</label><input type="password" id="rg-pass" placeholder="Mínimo 6 caracteres" class="inf"></div>
+        <div><label class="lf">Tipo de cuenta *</label>
+          <select id="rg-rol" class="inf">
+            <option value="cliente">🛒 Cliente — Comprar</option>
+            <option value="vendedor">🏪 Vendedor — Publicar y vender</option>
+          </select>
+        </div>
+        <button onclick="doReg()" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl text-sm shadow hover:bg-gray-700 transition">Crear cuenta</button>
+      </div>
+
+      <!-- RECUPERAR -->
+      <div id="aform-rec" class="p-6 space-y-4 hidden fi">
+        <p class="text-sm text-gray-500 text-center">Ingresa tu correo y te enviaremos instrucciones.</p>
+        <div><label class="lf">Correo electrónico</label><input type="email" id="rc-email" placeholder="correo@email.com" class="inf"></div>
+        <button onclick="doRecuperar()" class="w-full bg-orange-500 text-white font-bold py-3 rounded-xl text-sm hover:bg-orange-600 transition">Enviar instrucciones</button>
+        <button onclick="authTab('login')" class="w-full text-sm text-gray-400 hover:underline">← Volver</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== APP PRINCIPAL ===== -->
+<div id="app" class="hidden">
+  <!-- HEADER -->
+  <header class="bg-[#fff159] sticky top-0 z-40 shadow-sm">
+    <div class="max-w-6xl mx-auto px-3 py-2.5 flex items-center justify-between gap-2">
+      <button onclick="goTo('cat')" class="flex items-center gap-2 flex-shrink-0">
+        <i class="fa-solid fa-bag-shopping text-gray-900 text-lg"></i>
+        <span class="font-black text-gray-900 text-base">EmprendeMall</span>
+        <span class="bg-gray-900 text-yellow-300 text-[9px] font-black px-1.5 py-0.5 rounded-full">V4</span>
+      </button>
+      <div id="hdr-search" class="flex-1 max-w-xs hidden sm:block">
+        <div class="relative">
+          <input type="text" id="q-desktop" oninput="onSearch()" placeholder="Buscar producto, vendedor..." class="w-full py-2 px-3 pr-8 rounded-lg bg-white text-sm border border-yellow-300 shadow-sm">
+          <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-gray-400 text-xs"></i>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <div id="hdr-cred" class="hidden items-center gap-1 bg-white rounded-full px-2.5 py-1 border border-gray-200 cursor-pointer shadow-sm" onclick="goTo('vendedor');tabV('cred')">
+          <i class="fa-solid fa-coins text-yellow-500 text-xs"></i>
+          <span id="hdr-cred-n" class="text-sm font-black text-gray-800">0</span>
+        </div>
+        <button id="hdr-fav-btn" onclick="goTo('favs')" class="hidden relative bg-white p-2 rounded-full border border-gray-200 shadow-sm">
+          <i class="fa-solid fa-heart text-red-400 text-sm"></i>
+          <span id="bdg-fav" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 items-center justify-center hidden">0</span>
+        </button>
+        <button onclick="openCart()" class="relative bg-white p-2 rounded-full border border-gray-200 shadow-sm">
+          <i class="fa-solid fa-cart-shopping text-gray-700 text-sm"></i>
+          <span id="bdg-cart" class="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center hidden pu">0</span>
+        </button>
+        <div class="relative" id="avatar-wrap">
+          <button onclick="toggleUserMenu()" id="avatar-btn" class="w-8 h-8 rounded-full bg-gray-900 text-yellow-300 font-black text-xs flex items-center justify-center shadow border-2 border-white">?</button>
+          <div id="user-menu" class="hidden absolute right-0 top-10 bg-white shadow-2xl rounded-xl border border-gray-100 w-48 z-50 overflow-hidden">
+            <div class="px-3 py-2.5 bg-gray-50 border-b">
+              <p class="text-sm font-bold text-gray-900 truncate" id="um-nombre">—</p>
+              <p class="text-xs text-gray-400 truncate" id="um-email">—</p>
+              <span id="um-rol" class="inline-block text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold mt-1">—</span>
+            </div>
+            <button onclick="goTo('perfil');toggleUserMenu()" class="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-50 flex items-center gap-2"><i class="fa-solid fa-user text-gray-400 w-4"></i>Mi Perfil</button>
+            <button id="um-admin-btn" onclick="goTo('admin');toggleUserMenu()" class="hidden w-full text-left px-3 py-2.5 text-sm hover:bg-gray-50 flex items-center gap-2"><i class="fa-solid fa-shield text-blue-400 w-4"></i>Panel Admin</button>
+            <button onclick="doLogout()" class="w-full text-left px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t"><i class="fa-solid fa-right-from-bracket w-4"></i>Cerrar sesión</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Filtros catálogo -->
+    <div id="hdr-cat-bar" class="border-t border-yellow-200 bg-[#fffde6]">
+      <div class="max-w-6xl mx-auto px-3 py-2 space-y-2">
+        <div class="sm:hidden relative">
+          <input type="text" id="q-mobile" oninput="onSearch()" placeholder="Buscar..." class="w-full py-2 px-3 pr-8 rounded-lg bg-white text-sm border border-yellow-300 shadow-sm">
+          <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-gray-400 text-xs"></i>
+        </div>
+        <div id="cat-chips" class="flex gap-1.5 overflow-x-auto ns pb-0.5"></div>
+        <div class="grid grid-cols-4 gap-1.5">
+          <select id="f-sub" onchange="applyFilters()" class="inf text-sm py-1.5 px-2 col-span-2"><option value="">Todas las subcategorías</option></select>
+          <select id="f-orden" onchange="applyFilters()" class="inf text-sm py-1.5 px-2">
+            <option value="rec">Más recientes</option><option value="vis">Más vistos</option>
+            <option value="pl">Precio ↑</option><option value="ph">Precio ↓</option>
+          </select>
+          <button onclick="toggleFiltros()" class="inf text-sm py-1.5 px-2 flex items-center justify-center gap-1 font-semibold bg-white hover:bg-gray-50">
+            <i class="fa-solid fa-sliders"></i><span class="hidden sm:inline">Filtros</span>
+          </button>
+        </div>
+        <div id="filtros-extra" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 fi">
+          <select id="f-mod" onchange="applyFilters()" class="inf text-sm py-1.5 px-2">
+            <option value="">Todos formatos</option><option value="Menudeo">Menudeo</option>
+            <option value="Mayoreo">Mayoreo</option><option value="Seminuevo">Seminuevo</option>
+            <option value="Granel">Granel</option><option value="Artesanal">Artesanal</option>
+          </select>
+          <select id="f-seg" onchange="applyFilters()" class="inf text-sm py-1.5 px-2">
+            <option value="">Cualquier público</option><option value="Hombre">Hombre</option>
+            <option value="Mujer">Mujer</option><option value="Unisex">Unisex</option><option value="Infantil">Infantil</option>
+          </select>
+          <div class="col-span-2 space-y-1">
+            <div class="flex justify-between text-xs text-gray-500">
+              <span>Precio: $<span id="lbl-pmin">0</span>–$<span id="lbl-pmax">9999</span></span>
+              <button onclick="resetPrecio()" class="text-blue-500 hover:underline">Reset</button>
+            </div>
+            <div class="flex gap-2">
+              <input type="range" id="f-pmin" min="0" max="9999" value="0" oninput="onRange()" class="flex-1">
+              <input type="range" id="f-pmax" min="0" max="9999" value="9999" oninput="onRange()" class="flex-1">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-3 py-4">
+
+    <!-- CATÁLOGO -->
+    <section id="v-cat" class="fi">
+      <div id="cat-info" class="text-sm text-gray-400 mb-3 hidden"></div>
+      <div id="grid-cat" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"></div>
+    </section>
+
+    <!-- DETALLE -->
+    <section id="v-det" class="hidden fi">
+      <button onclick="goTo('cat')" class="mb-4 flex items-center gap-1.5 text-blue-600 font-semibold text-sm hover:underline">
+        <i class="fa-solid fa-arrow-left"></i> Volver al catálogo
+      </button>
+      <div id="det-content"></div>
+      <div id="det-resenas" class="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2 text-base"><i class="fa-solid fa-star text-yellow-400"></i>Reseñas</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+            <p class="text-sm font-bold text-gray-800">Escribe una reseña</p>
+            <input type="hidden" id="res-pid">
+            <input type="text" id="res-nombre" placeholder="Tu nombre" class="inf text-sm">
+            <div class="flex gap-1 text-xl cursor-pointer" id="star-sel">
+              <i class="fa-solid fa-star text-gray-200 sv" onclick="setStar(1)"></i>
+              <i class="fa-solid fa-star text-gray-200 sv" onclick="setStar(2)"></i>
+              <i class="fa-solid fa-star text-gray-200 sv" onclick="setStar(3)"></i>
+              <i class="fa-solid fa-star text-gray-200 sv" onclick="setStar(4)"></i>
+              <i class="fa-solid fa-star text-gray-200 sv" onclick="setStar(5)"></i>
+            </div>
+            <input type="hidden" id="res-stars" value="5">
+            <textarea id="res-texto" rows="3" placeholder="¿Cómo fue tu experiencia?" class="inf text-sm resize-none"></textarea>
+            <button onclick="saveResena()" class="w-full bg-gray-900 text-white font-bold py-2.5 rounded-xl text-sm">Publicar reseña</button>
+          </div>
+          <div class="lg:col-span-2 space-y-3" id="resenas-lista"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL VENDEDOR -->
+    <section id="v-vendedor" class="hidden fi">
+      <div class="flex gap-0 border-b border-gray-200 mb-5 overflow-x-auto ns">
+        <button onclick="tabV('pub')" id="vtab-pub" class="ton px-4 py-3 text-sm font-semibold text-blue-600 whitespace-nowrap flex items-center gap-1.5"><i class="fa-solid fa-plus-circle"></i>Publicar</button>
+        <button onclick="tabV('inv')" id="vtab-inv" class="px-4 py-3 text-sm font-semibold text-gray-500 whitespace-nowrap flex items-center gap-1.5"><i class="fa-solid fa-boxes-stacked"></i>Inventario</button>
+        <button onclick="tabV('met')" id="vtab-met" class="px-4 py-3 text-sm font-semibold text-gray-500 whitespace-nowrap flex items-center gap-1.5"><i class="fa-solid fa-chart-line"></i>Métricas</button>
+        <button onclick="tabV('cred')" id="vtab-cred" class="px-4 py-3 text-sm font-semibold text-gray-500 whitespace-nowrap flex items-center gap-1.5"><i class="fa-solid fa-coins"></i>Créditos</button>
+        <button onclick="tabV('rep')" id="vtab-rep" class="px-4 py-3 text-sm font-semibold text-gray-500 whitespace-nowrap flex items-center gap-1.5"><i class="fa-solid fa-medal"></i>Reputación</button>
+      </div>
+
+      <!-- TAB PUBLICAR -->
+      <div id="vt-pub" class="fi">
+        <div id="drafts-banner" class="hidden mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2"><span class="w-2 h-2 bg-amber-500 rounded-full"></span><span class="text-sm font-semibold text-amber-800">Tienes borradores guardados</span></div>
+          <button onclick="openDrafts()" class="text-sm bg-amber-100 text-amber-800 font-bold px-3 py-1.5 rounded-lg hover:bg-amber-200">Ver</button>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div class="lg:col-span-2">
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="font-bold text-gray-900 text-base flex items-center gap-2"><i class="fa-solid fa-bolt text-yellow-500"></i>Publicación Rápida</h3>
+                <div class="flex gap-2">
+                  <button onclick="saveDraft()" class="text-sm bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-lg font-bold hover:bg-amber-100 flex items-center gap-1"><i class="fa-solid fa-floppy-disk"></i>Borrador</button>
+                  <div class="flex items-center gap-1 bg-gray-900 text-yellow-300 rounded-full px-2.5 py-1"><i class="fa-solid fa-coins text-xs"></i><span id="pub-cred" class="text-sm font-black">0</span></div>
+                </div>
+              </div>
+
+              <!-- Datos del vendedor/negocio -->
+              <div class="bg-blue-50 border border-blue-200 rounded-xl p-3.5 space-y-3">
+                <p class="text-sm font-bold text-blue-800"><i class="fa-solid fa-store mr-1.5"></i>Información del vendedor</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><label class="lf">Nombre del vendedor *</label><input type="text" id="p-vendedor" placeholder="Tu nombre completo" class="inf text-sm"></div>
+                  <div><label class="lf">Nombre del negocio *</label><input type="text" id="p-neg" placeholder="Ej. Calzado León" class="inf text-sm"></div>
+                </div>
+                <div><label class="lf">Dirección del negocio (opcional)</label>
+                  <input type="text" id="p-direccion" placeholder="Ej. Av. López Mateos 123, Col. Centro, Aguascalientes" class="inf text-sm">
+                </div>
+              </div>
+
+              <div><label class="lf">Título del producto *</label><input type="text" id="p-tit" placeholder="Ej. Tenis Urban Confort" class="inf text-sm"></div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="lf">Categoría *</label><select id="p-cat" onchange="onCatChange()" class="inf text-sm"></select></div>
+                <div><label class="lf">Subcategoría</label><select id="p-sub" class="inf text-sm"><option value="">— Sin subcategoría —</option></select></div>
+              </div>
+
+              <!-- Atributos dinámicos -->
+              <div id="attrs-box"></div>
+              <!-- Variantes -->
+              <div id="vars-section" class="hidden space-y-2">
+                <div class="flex justify-between items-center">
+                  <label class="lf mb-0">Variantes (opcional)</label>
+                  <button onclick="addVar()" class="text-sm bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg font-bold hover:bg-blue-100">+ Variante</button>
+                </div>
+                <div id="vars-list" class="space-y-2"></div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="lf">Formato de venta *</label>
+                  <select id="p-mod" onchange="onModChange()" class="inf text-sm">
+                    <option value="Menudeo">Menudeo</option><option value="Mayoreo">Mayoreo / Lotes</option>
+                    <option value="Seminuevo">Seminuevo / Usado</option><option value="Granel">A Granel</option><option value="Artesanal">Artesanal</option>
+                  </select>
+                </div>
+                <div id="may-min-box" class="hidden"><label class="lf">Mínimo de compra</label><input type="number" id="p-minmay" min="2" value="6" class="inf text-sm"></div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="lf">Tipo de precio</label>
+                  <select id="p-tprecio" onchange="onTipoPrecio()" class="inf text-sm">
+                    <option value="regular">Precio regular</option><option value="remate">Remate especial</option><option value="pct">Descuento %</option>
+                  </select>
+                </div>
+                <div id="desc-box" class="hidden"><label class="lf">% Descuento</label><input type="number" id="p-dpct" min="1" max="99" value="10" oninput="calcPrecio()" class="inf text-sm"></div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div><label id="lbl-precio" class="lf">Precio ($ MXN) *</label><input type="number" id="p-precio" min="1" oninput="calcPrecio()" class="inf text-sm"></div>
+                <div><label id="lbl-stock" class="lf">Stock inicial *</label><input type="number" id="p-stock" min="1" class="inf text-sm"></div>
+              </div>
+              <div id="precio-preview" class="hidden bg-blue-50 border border-blue-200 p-2.5 rounded-xl text-sm text-blue-700">
+                Precio final: <strong id="pf-val">$0</strong>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="lf">WhatsApp *</label><input type="tel" id="p-wa" placeholder="4491234567" class="inf text-sm"></div>
+                <div><label class="lf">Cobro</label>
+                  <select id="p-pago" class="inf text-sm"><option value="Ambos">Efectivo/Transf.</option><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option></select>
+                </div>
+              </div>
+
+              <div><label class="lf">Descripción *</label><textarea id="p-desc" rows="2" placeholder="Detalles del producto..." class="inf text-sm resize-none"></textarea></div>
+
+              <!-- ENGO Logística -->
+              <details class="bg-indigo-50 border border-indigo-200 rounded-xl overflow-hidden">
+                <summary class="p-3 text-sm font-bold text-indigo-800 cursor-pointer flex items-center gap-2 select-none">
+                  <i class="fa-solid fa-truck text-indigo-500"></i>Logística ENGO (preparación futura)
+                  <span class="text-xs bg-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded-full ml-auto">Opcional</span>
+                </summary>
+                <div class="p-3 pt-0 grid grid-cols-2 gap-2">
+                  <div><label class="lf">Peso (kg)</label><input type="number" id="e-peso" placeholder="0.5" step="0.1" class="inf text-sm"></div>
+                  <div><label class="lf">Largo (cm)</label><input type="number" id="e-largo" placeholder="30" class="inf text-sm"></div>
+                  <div><label class="lf">Ancho (cm)</label><input type="number" id="e-ancho" placeholder="20" class="inf text-sm"></div>
+                  <div><label class="lf">Alto (cm)</label><input type="number" id="e-alto" placeholder="10" class="inf text-sm"></div>
+                  <div><label class="lf">Ciudad</label><input type="text" id="e-ciudad" placeholder="Aguascalientes" class="inf text-sm"></div>
+                  <div><label class="lf">Tipo entrega</label>
+                    <select id="e-tipo" class="inf text-sm"><option value="ENGO">ENGO Express</option><option value="Acuerdo">A convenir</option><option value="Ambos">Ambas</option></select>
+                  </div>
+                </div>
+              </details>
+
+              <!-- Imágenes -->
+              <div>
+                <label class="lf">Fotos del producto (máx. 5)</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" onclick="abrirCamara()" class="flex items-center justify-center h-14 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 gap-2 transition w-full">
+                    <i class="fa-solid fa-camera text-gray-400"></i><span class="text-sm text-gray-500 font-medium">Cámara</span>
+                  </button>
+                  <label class="flex items-center justify-center h-14 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 gap-2 transition">
+                    <i class="fa-solid fa-image text-gray-400"></i><span class="text-sm text-gray-500 font-medium">Galería</span>
+                    <input type="file" id="input-galeria" accept="image/*" multiple onchange="addFotos(this)" class="hidden">
+                  </label>
+                </div>
+                <input type="file" id="input-camara" accept="image/*" capture="environment" onchange="addFotos(this)" class="hidden">
+                <div id="fotos-prev" class="flex gap-2 mt-2.5 overflow-x-auto ns"></div>
+              </div>
+
+              <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
+                <i class="fa-solid fa-coins text-amber-500 mr-1.5"></i>Esta publicación costará <strong>10 créditos</strong> y estará activa <strong>30 días</strong>.
+              </div>
+              <button onclick="doPublicar()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl text-base shadow-lg hover:bg-blue-700 transition">
+                <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>Publicar en el catálogo
+              </button>
+            </div>
+          </div>
+          <!-- Sidebar -->
+          <div class="space-y-4">
+            <div class="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-2xl p-5 shadow-xl">
+              <p class="text-xs text-gray-400 font-bold uppercase mb-3">Mis créditos</p>
+              <div class="flex items-center gap-4">
+                <div class="relative w-16 h-16 flex-shrink-0">
+                  <svg width="64" height="64" viewBox="0 0 64 64">
+                    <circle cx="32" cy="32" r="26" fill="none" stroke="#374151" stroke-width="6"/>
+                    <circle id="cred-ring" cx="32" cy="32" r="26" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round" transform="rotate(-90 32 32)" stroke-dasharray="163" stroke-dashoffset="163" style="transition:stroke-dashoffset .7s ease"/>
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center"><span id="cred-ring-n" class="text-base font-black text-yellow-300">0</span></div>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-400">de 100 máximo</p>
+                  <p class="text-sm text-yellow-200 font-semibold mt-0.5">1 pub = 10 créditos</p>
+                  <button onclick="tabV('cred')" class="text-sm text-yellow-400 hover:underline mt-1">Recargar →</button>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+              <h4 class="font-bold text-gray-900 text-sm mb-3"><i class="fa-solid fa-clock-rotate-left text-gray-400 mr-1.5"></i>Últimas publicadas</h4>
+              <div id="ultimas-pubs"><p class="text-sm text-gray-400 text-center py-4">Sin publicaciones aún.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB INVENTARIO -->
+      <div id="vt-inv" class="hidden fi">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div class="flex justify-between items-center p-4 border-b"><h3 class="font-bold text-gray-900">Monitor de Inventario y Ventas</h3><span id="inv-count" class="text-sm text-gray-400">0 pubs</span></div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 border-b text-gray-500 text-xs font-bold uppercase tracking-wide">
+                <tr><th class="p-3 text-left">Artículo</th><th class="p-3 text-left">Estado</th><th class="p-3 text-center">Días</th><th class="p-3 text-center">Stock</th><th class="p-3 text-center">Vendidos</th><th class="p-3 text-center">Acciones</th></tr>
+              </thead>
+              <tbody id="inv-tbody" class="divide-y divide-gray-50"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB MÉTRICAS -->
+      <div id="vt-met" class="hidden fi">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 text-center"><i class="fa-solid fa-eye text-blue-500 text-2xl mb-1.5"></i><p class="text-3xl font-black text-gray-900" id="m-viz">0</p><p class="text-xs text-gray-400 uppercase font-bold mt-0.5">Visualizaciones</p></div>
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 text-center"><i class="fa-brands fa-whatsapp text-green-500 text-2xl mb-1.5"></i><p class="text-3xl font-black text-gray-900" id="m-wa">0</p><p class="text-xs text-gray-400 uppercase font-bold mt-0.5">Clics WA</p></div>
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 text-center"><i class="fa-solid fa-bag-shopping text-purple-500 text-2xl mb-1.5"></i><p class="text-3xl font-black text-gray-900" id="m-vend">0</p><p class="text-xs text-gray-400 uppercase font-bold mt-0.5">Ventas</p></div>
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 text-center"><i class="fa-solid fa-circle-check text-green-500 text-2xl mb-1.5"></i><p class="text-3xl font-black text-gray-900" id="m-act">0</p><p class="text-xs text-gray-400 uppercase font-bold mt-0.5">Activos</p></div>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5"><h3 class="font-bold text-gray-900 mb-3">Estado de publicaciones</h3><div id="m-estados"></div></div>
+      </div>
+
+      <!-- TAB CRÉDITOS -->
+      <div id="vt-cred" class="hidden fi">
+        <div class="max-w-sm mx-auto space-y-4">
+          <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 text-white text-center shadow-xl">
+            <p class="text-xs text-gray-400 uppercase font-bold mb-2">Saldo de créditos</p>
+            <div class="text-6xl font-black text-yellow-300 my-3" id="cred-big">0</div>
+            <div class="bg-gray-700 rounded-full h-2.5 mb-2"><div class="bg-yellow-400 h-2.5 rounded-full transition-all duration-500" id="cred-bar" style="width:0%"></div></div>
+            <p class="text-sm text-gray-400">de 100 créditos máximo · 1 crédito = $1 MXN</p>
+          </div>
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <h3 class="font-bold text-gray-900 mb-3">Recargar créditos</h3>
+            <div class="grid grid-cols-3 gap-2 mb-3">
+              <button onclick="addCredits(10)" class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center hover:bg-blue-50 hover:border-blue-300 transition"><div class="text-lg font-black text-gray-900">10</div><div class="text-xs text-gray-400">$10 MXN</div></button>
+              <button onclick="addCredits(30)" class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center hover:bg-blue-50 hover:border-blue-300 transition"><div class="text-lg font-black text-gray-900">30</div><div class="text-xs text-gray-400">$30 MXN</div></button>
+              <button onclick="addCredits(50)" class="bg-yellow-50 border border-yellow-300 rounded-xl p-3 text-center hover:bg-yellow-100 transition"><div class="text-lg font-black text-yellow-700">50</div><div class="text-xs text-yellow-600">$50 MXN</div></button>
+            </div>
+            <p class="text-xs text-gray-400 text-center">En producción: integrar Stripe / CoDi / Efectivo</p>
+          </div>
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+            <h3 class="font-bold text-gray-900 mb-3 text-sm">Historial</h3>
+            <div id="cred-hist"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB REPUTACIÓN -->
+      <div id="vt-rep" class="hidden fi">
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 text-center"><div class="text-4xl font-black text-gray-900 mb-1" id="rep-avg">5.0</div><div id="rep-stars" class="flex justify-center gap-0.5 mb-1"></div><p class="text-sm text-gray-400">Promedio</p></div>
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 text-center"><div class="text-4xl font-black text-green-600 mb-1" id="rep-ventas">0</div><p class="text-sm text-gray-400">Ventas</p></div>
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 text-center"><div class="text-4xl font-black text-blue-600 mb-1" id="rep-res">0</div><p class="text-sm text-gray-400">Reseñas</p></div>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5"><h3 class="font-bold text-gray-900 mb-3">Últimas reseñas</h3><div id="rep-list"></div></div>
+      </div>
+    </section>
+
+    <!-- FAVORITOS -->
+    <section id="v-favs" class="hidden fi">
+      <h2 class="font-black text-gray-900 text-xl mb-4 flex items-center gap-2"><i class="fa-solid fa-heart text-red-400"></i>Mis favoritos</h2>
+      <div id="favs-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div>
+    </section>
+
+    <!-- PERFIL -->
+    <section id="v-perfil" class="hidden fi max-w-sm mx-auto">
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="bg-gradient-to-r from-gray-900 to-gray-700 p-6 text-center">
+          <div class="w-16 h-16 rounded-full bg-yellow-400 mx-auto flex items-center justify-center text-gray-900 font-black text-2xl mb-2" id="perf-av">?</div>
+          <p class="text-white font-bold text-base" id="perf-nom">—</p>
+          <p class="text-gray-400 text-sm" id="perf-mail">—</p>
+          <span id="perf-rol" class="inline-block bg-yellow-400 text-gray-900 text-sm font-black px-2.5 py-0.5 rounded-full mt-1">—</span>
+        </div>
+        <div class="p-5 space-y-3">
+          <div><label class="lf">Nombre</label><input type="text" id="pf-nom" class="inf text-sm"></div>
+          <div><label class="lf">Correo (no editable)</label><input type="email" id="pf-mail" disabled class="inf text-sm bg-gray-50 text-gray-400"></div>
+          <div><label class="lf">Teléfono WhatsApp</label><input type="tel" id="pf-tel" class="inf text-sm"></div>
+          <div><label class="lf">Nueva contraseña (opcional)</label><input type="password" id="pf-pass" placeholder="Mínimo 6 caracteres" class="inf text-sm"></div>
+          <button onclick="savePerfil()" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl text-sm">Guardar cambios</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="v-admin" class="hidden fi">
+      <div class="flex items-center gap-2 mb-5">
+        <i class="fa-solid fa-shield-halved text-blue-600 text-xl"></i>
+        <h2 class="font-black text-gray-900 text-xl">Panel Administrador</h2>
+        <span class="bg-red-100 text-red-700 text-sm font-bold px-2 py-0.5 rounded-full">MÓDULO SEPARADO</span>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 text-center"><i class="fa-solid fa-users text-blue-500 text-xl mb-1.5"></i><p class="text-3xl font-black" id="adm-u">0</p><p class="text-xs text-gray-400 uppercase font-bold mt-0.5">Usuarios</p></div>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 text-center"><i class="fa-solid fa-box text-purple-500 text-xl mb-1.5"></i><p class="text-3xl font-black" id="adm-p">0</p><p class="text-xs text-gray-400 uppercase font-bold mt-0.5">Productos</p></div>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 text-center"><i class="fa-solid fa-bag-shopping text-green-500 text-xl mb-1.5"></i><p class="text-3xl font-black" id="adm-v">0</p><p class="text-xs text-gray-400 uppercase font-bold mt-0.5">Ventas</p></div>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 text-center"><i class="fa-solid fa-coins text-yellow-500 text-xl mb-1.5"></i><p class="text-3xl font-black" id="adm-c">0</p><p class="text-xs text-gray-400 uppercase font-bold mt-0.5">Créditos</p></div>
+      </div>
+      <div class="flex gap-0 border-b border-gray-200 mb-4 overflow-x-auto ns">
+        <button onclick="tabA('usr')" id="atab-usr" class="ton px-4 py-2.5 text-sm font-semibold text-blue-600 whitespace-nowrap">Usuarios</button>
+        <button onclick="tabA('pub')" id="atab-pub" class="px-4 py-2.5 text-sm font-semibold text-gray-500 whitespace-nowrap hover:text-gray-700">Publicaciones</button>
+        <button onclick="tabA('cat')" id="atab-cat" class="px-4 py-2.5 text-sm font-semibold text-gray-500 whitespace-nowrap hover:text-gray-700">Categorías</button>
+        <button onclick="tabA('mod')" id="atab-mod" class="px-4 py-2.5 text-sm font-semibold text-gray-500 whitespace-nowrap hover:text-gray-700">Moderación</button>
+      </div>
+      <div id="at-usr" class="fi"><div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"><table class="w-full text-sm"><thead class="bg-gray-50 border-b text-gray-500 text-xs uppercase font-bold"><tr><th class="p-3 text-left">Usuario</th><th class="p-3 text-left">Rol</th><th class="p-3 text-center">Tel</th><th class="p-3 text-center">Créditos</th><th class="p-3 text-center">Acción</th></tr></thead><tbody id="adm-u-tbody" class="divide-y divide-gray-50"></tbody></table></div></div>
+      <div id="at-pub" class="hidden fi"><div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"><table class="w-full text-sm"><thead class="bg-gray-50 border-b text-gray-500 text-xs uppercase font-bold"><tr><th class="p-3 text-left">Producto</th><th class="p-3 text-left">Vendedor</th><th class="p-3 text-center">Estado</th><th class="p-3 text-center">Precio</th><th class="p-3 text-center">Acción</th></tr></thead><tbody id="adm-p-tbody" class="divide-y divide-gray-50"></tbody></table></div></div>
+      <div id="at-cat" class="hidden fi">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
+          <h3 class="font-bold text-gray-900">Gestión de Categorías y Subcategorías</h3>
+          <div class="flex gap-2"><input type="text" id="adm-nueva-cat" placeholder="Nueva categoría principal" class="inf text-sm flex-1"><button onclick="addCatAdmin()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-700">Agregar</button></div>
+          <div id="adm-cats-list" class="space-y-2"></div>
+        </div>
+      </div>
+      <div id="at-mod" class="hidden fi"><div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5"><h3 class="font-bold text-gray-900 mb-3">Reseñas para moderar</h3><div id="adm-mod-list" class="space-y-3"></div></div></div>
+    </section>
+  </main>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bnav flex items-center justify-around px-2">
+    <button onclick="goTo('cat')" id="bn-cat" class="flex flex-col items-center gap-0.5 py-2 min-w-[56px] text-blue-600"><i class="fa-solid fa-store text-xl"></i><span class="text-xs font-bold">Tienda</span></button>
+    <button onclick="goTo('favs')" id="bn-favs" class="flex flex-col items-center gap-0.5 py-2 min-w-[56px] text-gray-400"><i class="fa-solid fa-heart text-xl"></i><span class="text-xs font-semibold">Favoritos</span></button>
+    <button onclick="goTo('vendedor')" id="bn-vend" class="flex flex-col items-center gap-0.5 py-2 min-w-[56px] text-gray-400"><i class="fa-solid fa-shop text-xl"></i><span class="text-xs font-semibold">Vender</span></button>
+    <button onclick="goTo('perfil')" id="bn-perf" class="flex flex-col items-center gap-0.5 py-2 min-w-[56px] text-gray-400"><i class="fa-solid fa-user text-xl"></i><span class="text-xs font-semibold">Perfil</span></button>
+  </nav>
+</div>
+
+<!-- MODAL CARRITO -->
+<div id="modal-cart" class="fixed inset-0 bk z-50 flex justify-end hidden opacity-0 transition-opacity duration-300">
+  <div id="cart-body" class="bg-white w-full max-w-sm h-full shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300">
+    <div class="flex justify-between items-center border-b border-gray-100 p-4">
+      <h3 class="font-bold text-gray-900 flex items-center gap-2 text-base"><i class="fa-solid fa-cart-shopping text-blue-600"></i>Carrito</h3>
+      <button onclick="closeCart()" class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 font-bold text-lg leading-none">&times;</button>
+    </div>
+    <div id="cart-items" class="flex-1 overflow-y-auto p-4 space-y-3 ns"></div>
+    <div class="border-t border-gray-100 p-4 space-y-3">
+      <div class="space-y-1 text-sm">
+        <div class="flex justify-between text-gray-500"><span>Subtotal:</span><span id="cart-sub">$0</span></div>
+        <div class="flex justify-between text-gray-500"><span>Logística:</span><span class="text-indigo-600 font-bold">ENGO Express</span></div>
+        <div class="flex justify-between font-bold text-base border-t pt-2"><span>Total:</span><span class="text-blue-600 text-xl" id="cart-total">$0</span></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="cancelCart()" class="bg-gray-100 text-gray-700 font-bold py-3 rounded-xl text-sm hover:bg-gray-200">Cancelar</button>
+        <button onclick="confirmCart()" class="bg-blue-600 text-white font-bold py-3 rounded-xl text-sm hover:bg-blue-700 shadow-lg">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN VENTA (CANDADO VENDEDOR) -->
+<div id="modal-venta" class="fixed inset-0 bk z-50 flex items-center justify-center hidden p-4">
+  <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden fi">
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-5 text-white">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-lock text-white text-lg"></i></div>
+        <div><h3 class="font-black text-lg">Confirmar Pedido</h3><p class="text-blue-200 text-xs">El vendedor validará por WhatsApp antes de procesar</p></div>
+      </div>
+    </div>
+    <div class="p-5 space-y-4">
+      <div class="bg-gray-50 rounded-xl p-3.5 border border-gray-200">
+        <p class="text-xs text-gray-500 uppercase font-bold mb-1">Folio de transacción</p>
+        <p class="text-lg font-black text-blue-600 tracking-wider" id="venta-folio">—</p>
+        <p class="text-xs text-gray-400 mt-0.5">Guarda este folio para cualquier duda o aclaración</p>
+      </div>
+      <div><p class="text-sm font-bold text-gray-700 mb-2">Resumen del pedido:</p><div id="venta-resumen" class="space-y-2 max-h-40 overflow-y-auto ns"></div></div>
+      <div class="flex justify-between items-center bg-blue-50 rounded-xl px-4 py-3 border border-blue-100"><span class="font-bold text-gray-800">Total:</span><span class="text-xl font-black text-blue-600" id="venta-total">$0</span></div>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex gap-3">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-base mt-0.5 flex-shrink-0"></i>
+        <div class="text-sm text-amber-800 leading-relaxed"><strong class="block mb-0.5">¿Cómo funciona?</strong>Tu pedido se envía al vendedor por WhatsApp con el folio. El stock <strong>no se descuenta</strong> hasta que el vendedor confirme la venta.</div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button onclick="cancelarVenta()" class="bg-gray-100 text-gray-700 font-bold py-3 rounded-xl text-sm hover:bg-gray-200">Cancelar</button>
+        <button onclick="enviarPedidoWA()" class="bg-green-500 text-white font-bold py-3 rounded-xl text-sm hover:bg-green-600 flex items-center justify-center gap-2 shadow-lg"><i class="fa-brands fa-whatsapp text-base"></i>Enviar por WA</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BORRADORES -->
+<div id="modal-drafts" class="fixed inset-0 bk z-50 flex items-end sm:items-center justify-center hidden p-4">
+  <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col fi">
+    <div class="flex justify-between items-center p-4 border-b"><h3 class="font-bold text-gray-900 text-base">Borradores guardados</h3><button onclick="closeDrafts()" class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 font-bold leading-none">&times;</button></div>
+    <div id="drafts-list" class="overflow-y-auto p-4 space-y-3 ns flex-1"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="tw"><div id="toast" class="hidden"><div id="ti" class="bg-gray-900 text-white text-sm font-semibold px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2"><i id="t-ico" class="fa-solid fa-check-circle text-green-400"></i><span id="t-msg">Listo</span></div></div></div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  EmprendeMall V4.0 — Firebase Firestore como backend real   ║
+// ║  Proyecto: ventas-28674 · Aguascalientes                    ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+// ── Firebase config ───────────────────────────────────────────
+const FB_CFG={
+  apiKey:"AIzaSyDhKgxRiWz1LS0iEiMBolSREQVudCFmbfw",
+  authDomain:"ventas-28674.firebaseapp.com",
+  projectId:"ventas-28674",
+  storageBucket:"ventas-28674.firebasestorage.app",
+  messagingSenderId:"916004786108",
+  appId:"1:916004786108:web:4c41996c806bb6407de5b9",
+  measurementId:"G-4GP5XRZLYM"
+};
+
+// ── Estado global ─────────────────────────────────────────────
+let fbApp,db,auth;
+let productos=[],carrito=[],fotosTemp=[],usuario=null,favs=new Set();
+let catActual='todos',pMin=0,pMax=9999,varIdx=0;
+let pedidoPendiente={folio:'',msg:'',total:0,items:[]};
+
+// ── Claves localStorage ──────────────────────────────────────
+const LS={DRAF:'EM4_draf',CART:'EM4_cart',SES:'EM4_ses',USR:'EM4_usr',INV:'EM4_inv'};
+// ── Flag de modo de ejecución ────────────────────────────────
+let MODO_FIREBASE = false; // se actualiza en DOMContentLoaded
+
+// ── Datos demo para modo local ────────────────────────────────
+const DEMO_USERS_LOCAL=[
+  {id:'u_c',email:'cliente@demo.com',password:'demo123',nombre:'Cliente Demo',tel:'4491234567',rol:'cliente',creditos:0,favoritos:[],histCred:[]},
+  {id:'u_v',email:'vendedor@demo.com',password:'demo123',nombre:'Vendedor Demo',tel:'4499876543',rol:'vendedor',creditos:80,favoritos:[],histCred:[{t:'recarga',n:80,f:Date.now()-5*864e5,nota:'Recarga inicial'}]},
+  {id:'u_a',email:'admin@demo.com',password:'demo123',nombre:'Admin EmprendeMall',tel:'4490000000',rol:'admin',creditos:100,favoritos:[],histCred:[]}
+];
+const DEMO_PRODS_LOCAL=[
+  {id:'demo1',vendedorId:'u_v',vendedorNombre:'Vendedor Demo',negocio:'Tienda Demo',direccion:'Centro, Aguascalientes',titulo:'Producto Demo — Calzado',catId:'calzado',sub:'Deportivo',attrs:{numero:'27',color:'Negro'},variantes:[],mod:'Menudeo',minMay:1,seg:'Hombre',desc:'Producto de demostración. Sube a GitHub Pages para sincronización real entre dispositivos.',precio:500,tipoPrecio:'regular',dpct:0,precioFinal:500,wa:'4491234567',pago:'Ambos',stock:10,vendidos:2,comentarios:[],logistica:'ENGO',engo:{peso:0.8,largo:30,ancho:20,alto:12,ciudad:'Aguascalientes',tipo:'ENGO'},fotos:['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=60'],visible:true,expira:Date.now()+30*864e5,pausado:false,viz:12,cliWA:3,createdAt:Date.now()-2*864e5},
+  {id:'demo2',vendedorId:'u_v',vendedorNombre:'Vendedor Demo',negocio:'Tienda Demo',direccion:'Centro, Aguascalientes',titulo:'Producto Demo — Ropa',catId:'moda',sub:'Mujer',attrs:{talla:'M',color:'Rosa'},variantes:[],mod:'Menudeo',minMay:1,seg:'Mujer',desc:'Otro producto de demostración para probar el catálogo localmente.',precio:350,tipoPrecio:'pct',dpct:20,precioFinal:280,wa:'4491234567',pago:'Efectivo',stock:5,vendidos:1,comentarios:[{nombre:'Ana',stars:5,texto:'Muy bueno!',f:Date.now()-864e5}],logistica:'ENGO',engo:{peso:0.3,largo:25,ancho:20,alto:3,ciudad:'Aguascalientes',tipo:'ENGO'},fotos:['https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=600&auto=format&fit=crop&q=60'],visible:true,expira:Date.now()+25*864e5,pausado:false,viz:8,cliWA:1,createdAt:Date.now()-864e5}
+];
+
+// ── Helpers localStorage para modo local ──────────────────────
+function lsGetUsers(){const d=localStorage.getItem(LS.USR);return d?JSON.parse(d):[...DEMO_USERS_LOCAL];}
+function lsSaveUsers(u){localStorage.setItem(LS.USR,JSON.stringify(u));}
+function lsGetProductos(){const d=localStorage.getItem(LS.INV);return d?JSON.parse(d):[...DEMO_PRODS_LOCAL];}
+function lsSaveProductos(p){localStorage.setItem(LS.INV,JSON.stringify(p));}
+function lsGetSes(){const d=localStorage.getItem(LS.SES);return d?JSON.parse(d):null;}
+function lsSaveSes(u){localStorage.setItem(LS.SES,JSON.stringify(u));}
+function lsClearSes(){localStorage.removeItem(LS.SES);}
+
+// ── Loading helper ────────────────────────────────────────────
+function showLoad(msg='Cargando...'){
+  const el=document.getElementById('loading-inline');
+  const msg_el=document.getElementById('loading-msg');
+  if(el){el.classList.remove('hidden');}
+  if(msg_el)msg_el.textContent=msg;
+}
+function hideLoad(){
+  const el=document.getElementById('loading-inline');
+  if(el)el.classList.add('hidden');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 1 — CATEGORÍAS (desde Firestore o config base)
+// ══════════════════════════════════════════════════════════════
+const CATS_BASE=[
+  {id:'tecnologia',nombre:'Tecnología',icon:'fa-microchip',subs:['Celulares','Laptops','Computadoras','Tablets','Smartwatch','Audio','Accesorios','Videojuegos','Consolas','Componentes PC'],attrs:[{id:'ram',label:'RAM',tipo:'sel',ops:['2GB','4GB','8GB','16GB','32GB','No aplica']},{id:'almacenamiento',label:'Almacenamiento',tipo:'sel',ops:['64GB','128GB','256GB','512GB','1TB','No aplica']},{id:'modelo',label:'Modelo',tipo:'txt'}]},
+  {id:'moda',nombre:'Moda',icon:'fa-shirt',subs:['Hombre','Mujer','Infantil','Bolsas','Relojes','Accesorios','Gorras'],attrs:[{id:'talla',label:'Talla',tipo:'sel',ops:['XS','S','M','L','XL','XXL','Unitalla']},{id:'color',label:'Color',tipo:'sel',ops:['Negro','Blanco','Gris','Rojo','Azul','Verde','Rosa','Café','Multicolor','Otro']}]},
+  {id:'calzado',nombre:'Calzado',icon:'fa-shoe-prints',subs:['Hombre','Mujer','Infantil','Deportivo','Formal','Casual'],attrs:[{id:'numero',label:'Número',tipo:'sel',ops:['9','9½','10','10½','11','11½','12','12½','13','13½','14','14½','15','15½','16','16½','17','17½','18','18½','19','19½','20','20½','21','21½','22','22½','23','23½','24','24½','25','25½','26','26½','27','27½','28','28½','29','29½','30','30½','31','31½','32','32½','33','33½','34','34½','35','35½','36','36½','37','37½','38','38½','39','39½','40','40½','41','41½','42','42½','43','43½','44','44½','45','46','47','48']},{id:'color',label:'Color',tipo:'sel',ops:['Negro','Blanco','Café','Gris','Azul','Rojo','Multicolor','Otro']}]},
+  {id:'hogar',nombre:'Hogar',icon:'fa-house',subs:['Muebles','Cocina','Decoración','Electrodomésticos','Jardín','Organización'],attrs:[{id:'material',label:'Material',tipo:'txt'},{id:'dim',label:'Dimensiones',tipo:'txt'}]},
+  {id:'vehiculos',nombre:'Vehículos',icon:'fa-car',subs:['Autos','Motocicletas','Bicicletas','Refacciones','Accesorios','Audio automotriz'],attrs:[{id:'marca',label:'Marca',tipo:'txt'},{id:'modelo_v',label:'Modelo/Año',tipo:'txt'},{id:'compat',label:'Compatibilidad',tipo:'txt'}]},
+  {id:'herramientas',nombre:'Herramientas y Construcción',icon:'fa-screwdriver-wrench',subs:['Herramientas eléctricas','Herramientas manuales','Ferretería','Pintura','Material eléctrico','Construcción'],attrs:[{id:'marca',label:'Marca',tipo:'txt'},{id:'voltaje',label:'Voltaje',tipo:'sel',ops:['110V','220V','Batería','No aplica']}]},
+  {id:'salud',nombre:'Salud y Belleza',icon:'fa-heart-pulse',subs:['Cosméticos','Perfumes','Cuidado facial','Barbería','Cabello','Higiene personal'],attrs:[{id:'volumen',label:'Volumen/Contenido',tipo:'sel',ops:['15ml','30ml','50ml','100ml','250ml','500ml','1L','Pieza']},{id:'tipo_piel',label:'Tipo de piel',tipo:'sel',ops:['Normal','Seca','Grasa','Mixta','Sensible','Todos','No aplica']}]},
+  {id:'deportes',nombre:'Deportes',icon:'fa-dumbbell',subs:['Gimnasio','Futbol','Running','Ciclismo','Camping'],attrs:[{id:'talla',label:'Talla',tipo:'sel',ops:['XS','S','M','L','XL','XXL','Unitalla','No aplica']},{id:'material',label:'Material',tipo:'txt'}]},
+  {id:'mascotas',nombre:'Mascotas',icon:'fa-paw',subs:['Alimento','Accesorios','Juguetes','Higiene'],attrs:[{id:'especie',label:'Para',tipo:'sel',ops:['Perro','Gato','Ave','Pez','Reptil','Roedor','Todos']},{id:'peso_c',label:'Peso/Contenido',tipo:'sel',ops:['250g','500g','1Kg','2Kg','5Kg','Pieza']}]},
+  {id:'alimentos',nombre:'Alimentos',icon:'fa-utensils',subs:['Snacks','Repostería','Bebidas','Productos artesanales','Dulces'],attrs:[{id:'peso_c',label:'Peso/Contenido',tipo:'sel',ops:['100g','250g','500g','1Kg','Litro','Pieza','Paquete']},{id:'ingredientes',label:'Ingredientes',tipo:'txt'}]},
+  {id:'escolar',nombre:'Escolar y Oficina',icon:'fa-book',subs:['Papelería','Mochilas','Oficina','Impresión','Escritorio'],attrs:[{id:'marca',label:'Marca',tipo:'txt'},{id:'color',label:'Color',tipo:'sel',ops:['Negro','Azul','Rojo','Verde','Rosa','Multicolor','No aplica']}]},
+  {id:'abarrotes',nombre:'Abarrotes',icon:'fa-basket-shopping',subs:['Granos','Enlatados','Lácteos','Limpieza','Higiene del hogar'],attrs:[{id:'peso_c',label:'Peso/Contenido',tipo:'sel',ops:['100g','250g','500g','1Kg','Litro','Pieza']}]}
+];
+let CATS_ACTIVAS=[...CATS_BASE];
+function getCatById(id){return CATS_ACTIVAS.find(c=>c.id===id)||null;}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 2 — FIRESTORE CRUD (toda la persistencia real aquí)
+// ══════════════════════════════════════════════════════════════
+// USUARIOS
+async function fbGetUser(uid){
+  if(!MODO_FIREBASE){
+    const u=lsGetUsers().find(x=>x.id===uid);return u||null;
+  }
+  try{const doc=await db.collection('usuarios').doc(uid).get();return doc.exists?{id:doc.id,...doc.data()}:null;}
+  catch(e){console.error('fbGetUser',e);return null;}
+}
+async function fbSaveUser(u){
+  if(!MODO_FIREBASE){
+    let users=lsGetUsers();const idx=users.findIndex(x=>x.id===u.id);
+    if(idx>=0)users[idx]={...users[idx],...u};else users.push(u);
+    lsSaveUsers(users);
+    // actualizar sesión si es el usuario actual
+    if(usuario&&u.id===usuario.id){usuario={...usuario,...u};lsSaveSes(usuario);}
+    return;
+  }
+  try{await db.collection('usuarios').doc(u.id).set(u,{merge:true});}
+  catch(e){console.error('fbSaveUser',e);}
+}
+async function fbGetAllUsers(){
+  if(!MODO_FIREBASE)return lsGetUsers();
+  try{const snap=await db.collection('usuarios').get();return snap.docs.map(d=>({id:d.id,...d.data()}));}
+  catch(e){console.error('fbGetAllUsers',e);return[];}
+}
+// PRODUCTOS
+async function fbGetProductos(){
+  if(!MODO_FIREBASE)return lsGetProductos();
+  try{
+    const snap=await db.collection('productos').orderBy('createdAt','desc').get();
+    return snap.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){console.error('fbGetProductos',e);return[];}
+}
+async function fbSaveProducto(p){
+  if(!MODO_FIREBASE){
+    let prods=lsGetProductos();const idx=prods.findIndex(x=>String(x.id)===String(p.id));
+    if(idx>=0)prods[idx]={...prods[idx],...p};else prods.unshift(p);
+    lsSaveProductos(prods);
+    // sincronizar array global
+    const gi=productos.findIndex(x=>String(x.id)===String(p.id));
+    if(gi>=0)productos[gi]={...productos[gi],...p};
+    return;
+  }
+  try{
+    const id=String(p.id);
+    await db.collection('productos').doc(id).set(p,{merge:true});
+  }catch(e){console.error('fbSaveProducto',e);}
+}
+async function fbDeleteProducto(id){
+  if(!MODO_FIREBASE){
+    let prods=lsGetProductos().filter(x=>String(x.id)!==String(id));
+    lsSaveProductos(prods);
+    productos=productos.filter(x=>String(x.id)!==String(id));
+    return;
+  }
+  try{await db.collection('productos').doc(String(id)).delete();}
+  catch(e){console.error('fbDeleteProducto',e);}
+}
+// CATEGORÍAS CUSTOM (admin)
+async function fbGetCats(){
+  if(!MODO_FIREBASE)return[...CATS_BASE];
+  try{
+    const doc=await db.collection('config').doc('categorias').get();
+    return doc.exists?(doc.data().lista||CATS_BASE):CATS_BASE;
+  }catch(e){return CATS_BASE;}
+}
+async function fbSaveCats(lista){
+  if(!MODO_FIREBASE){CATS_ACTIVAS=lista;return;}
+  try{await db.collection('config').doc('categorias').set({lista});}
+  catch(e){console.error('fbSaveCats',e);}
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 3 — AUTH (Firebase Authentication)
+// ══════════════════════════════════════════════════════════════
+function authTab(t){
+  ['login','reg','rec'].forEach(x=>document.getElementById('aform-'+x).classList.add('hidden'));
+  document.getElementById('aform-'+t).classList.remove('hidden');
+  ['login','reg'].forEach(x=>{
+    const b=document.getElementById('atab-'+x);if(!b)return;
+    b.classList.remove('ton','text-blue-600');b.classList.add('text-gray-400');
+  });
+  if(t==='login'||t==='reg'){
+    const b=document.getElementById('atab-'+t);
+    b.classList.add('ton','text-blue-600');b.classList.remove('text-gray-400');
+  }
+}
+function togglePass(id){const e=document.getElementById(id);e.type=e.type==='password'?'text':'password';}
+
+async function _doLoginFirebase(){
+  const email=document.getElementById('li-email').value.trim().toLowerCase();
+  const pass=document.getElementById('li-pass').value;
+  if(!email||!pass){toast('Completa todos los campos','err');return;}
+  const btn=document.querySelector('#aform-login button.bg-blue-600');
+  if(btn){btn.disabled=true;btn.textContent='Verificando...';}
+  try{
+    await auth.signInWithEmailAndPassword(email,pass);
+    // onAuthStateChanged dispara startApp automáticamente
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='Iniciar sesión';}
+    console.error('[EM V4] Login error:', e.code, e.message);
+    const msgs={
+      'auth/user-not-found':'Correo no registrado. ¿Ya te registraste?',
+      'auth/wrong-password':'Contraseña incorrecta',
+      'auth/invalid-email':'Correo inválido',
+      'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
+      'auth/invalid-credential':'Correo o contraseña incorrectos',
+      'auth/operation-not-allowed':'Email/Password no activado. Ve a Firebase Console → Authentication → Método de acceso → Activa Correo/Contraseña',
+      'auth/network-request-failed':'Sin conexión. Verifica tu internet.',
+      'auth/configuration-not-found':'Firebase no configurado correctamente.'
+    };
+    toast(msgs[e.code]||('Error '+e.code+': '+e.message),'err');
+  }
+}
+
+async function _doRegFirebase(){
+  const nombre=document.getElementById('rg-nombre').value.trim();
+  const email=document.getElementById('rg-email').value.trim().toLowerCase();
+  const tel=document.getElementById('rg-tel').value.trim();
+  const pass=document.getElementById('rg-pass').value;
+  const rol=document.getElementById('rg-rol').value;
+  if(!nombre||!email||!tel||!pass){toast('Completa todos los campos obligatorios','err');return;}
+  if(!/^[0-9]{10}$/.test(tel)){toast('Teléfono debe tener 10 dígitos','err');return;}
+  if(pass.length<6){toast('Contraseña mínimo 6 caracteres','err');return;}
+  const btn=document.querySelector('#aform-reg button.bg-gray-900');
+  if(btn){btn.disabled=true;btn.textContent='Creando cuenta...';}
+  try{
+    const cred=await auth.createUserWithEmailAndPassword(email,pass);
+    const uid=cred.user.uid;
+    await fbSaveUser({id:uid,email,nombre,tel,rol,creditos:0,favoritos:[],histCred:[],
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    // onAuthStateChanged llama a startApp automáticamente
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='Crear cuenta';}
+    console.error('[EM V4] Registro error:', e.code, e.message);
+    const msgs={
+      'auth/email-already-in-use':'Este correo ya está registrado. Intenta iniciar sesión.',
+      'auth/invalid-email':'Correo inválido',
+      'auth/weak-password':'Contraseña muy débil (mínimo 6 caracteres)',
+      'auth/operation-not-allowed':'Debes activar Email/Password en Firebase Console → Authentication → Método de acceso',
+      'auth/network-request-failed':'Sin conexión. Verifica tu internet.',
+      'auth/too-many-requests':'Demasiadas solicitudes. Espera unos minutos.'
+    };
+    toast(msgs[e.code]||('Error '+e.code+': '+e.message),'err');
+  }
+}
+
+async function doRecuperar(){
+  const email=document.getElementById('rc-email').value.trim();
+  if(!email){toast('Ingresa tu correo','err');return;}
+  if(!MODO_FIREBASE){
+    toast('Modo local: no se envían correos. Usa las cuentas demo.','err');
+    return;
+  }
+  const btnRec=document.querySelector('#aform-rec button.bg-orange-500');
+  if(btnRec){btnRec.disabled=true;btnRec.textContent='Enviando...';}
+  try{
+    await auth.sendPasswordResetEmail(email);
+    if(btnRec){btnRec.disabled=false;btnRec.textContent='Enviar instrucciones';}
+    toast('¡Listo! Revisa tu correo');authTab('login');
+  }catch(e){
+    if(btnRec){btnRec.disabled=false;btnRec.textContent='Enviar instrucciones';}
+    toast('Error al enviar: '+e.message,'err');
+  }
+}
+
+async function _doLogoutFirebase(){
+  try{
+    await auth.signOut();
+    usuario=null;productos=[];carrito=[];favs=new Set();
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('pantalla-auth').classList.remove('hidden');
+    toggleUserMenu(false);
+    localStorage.removeItem(LS.SES);
+  }catch(e){console.error(e);}
+}
+
+// Compartir app
+function compartirWA(){
+  const url=window.location.href;
+  const msg=`🛒 *EmprendeMall* — Marketplace Local Aguascalientes\nCompra y vende en tu comunidad.\n${url}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+}
+function compartirFB(){
+  const url=encodeURIComponent(window.location.href);
+  window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`,'_blank');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 4 — INICIO DE APP (post-auth)
+// ══════════════════════════════════════════════════════════════
+async function startApp(firebaseUser){
+  try{
+    let u = await fbGetUser(firebaseUser.uid);
+    if(!u){
+      u = {id:firebaseUser.uid,
+           email: firebaseUser.email,
+           nombre: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+           tel:'', rol:'cliente', creditos:0, favoritos:[], histCred:[]};
+      await fbSaveUser(u);
+    }
+    usuario = u;
+    CATS_ACTIVAS = MODO_FIREBASE ? await fbGetCats() : [...CATS_BASE];
+    productos = await fbGetProductos();
+    checkExpiry();
+    setupUI();
+    favs = new Set((u.favoritos||[]).map(String));
+    updateFavBadge();
+    buildCatChips();
+    // Re-habilitar botones de auth por si estaban deshabilitados
+    const btnLogin = document.querySelector('#aform-login button.bg-blue-600');
+    const btnReg   = document.querySelector('#aform-reg button.bg-gray-900');
+    if(btnLogin){btnLogin.disabled=false; btnLogin.textContent='Iniciar sesión';}
+    if(btnReg)  {btnReg.disabled=false;   btnReg.textContent='Crear cuenta';}
+    document.getElementById('pantalla-auth').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    goTo('cat');
+  }catch(e){
+    console.error('[EM V4] startApp error:', e);
+    // Re-habilitar botones
+    const btnLogin = document.querySelector('#aform-login button.bg-blue-600');
+    const btnReg   = document.querySelector('#aform-reg button.bg-gray-900');
+    if(btnLogin){btnLogin.disabled=false; btnLogin.textContent='Iniciar sesión';}
+    if(btnReg)  {btnReg.disabled=false;   btnReg.textContent='Crear cuenta';}
+    // Mostrar error con diagnóstico
+    const msgs = {
+      'permission-denied': 'Error de permisos Firestore. Verifica las reglas de seguridad en Firebase Console.',
+      'unavailable': 'Sin conexión a Firebase. Revisa tu internet.',
+      'not-found': 'Base de datos no encontrada. Verifica el proyecto Firebase.'
+    };
+    toast(msgs[e.code] || 'Error al cargar: ' + e.message, 'err');
+  }
+}
+
+function checkExpiry(){
+  const now=Date.now();let ch=false;
+  productos.forEach(p=>{
+    if(!p.expira){p.expira=now+30*864e5;ch=true;}
+    if(!p.createdAt)p.createdAt=now;
+    if(!p.attrs)p.attrs={};
+    if(!p.variantes)p.variantes=[];
+    if(!p.engo)p.engo={peso:'',largo:'',ancho:'',alto:'',ciudad:'Aguascalientes',tipo:'ENGO'};
+    if(p.viz===undefined)p.viz=0;
+    if(p.cliWA===undefined)p.cliWA=0;
+  });
+}
+
+function setupUI(){
+  const rol=usuario.rol,ini=usuario.nombre.charAt(0).toUpperCase();
+  document.getElementById('avatar-btn').textContent=ini;
+  document.getElementById('um-nombre').textContent=usuario.nombre;
+  document.getElementById('um-email').textContent=usuario.email;
+  document.getElementById('um-rol').textContent=rol.toUpperCase();
+  if(rol!=='cliente'){document.getElementById('hdr-cred').classList.add('flex');updateCredDisplay();}
+  if(rol==='cliente')document.getElementById('hdr-fav-btn').classList.remove('hidden');
+  if(rol==='admin')document.getElementById('um-admin-btn').classList.remove('hidden');
+  document.getElementById('perf-av').textContent=ini;
+  document.getElementById('perf-nom').textContent=usuario.nombre;
+  document.getElementById('perf-mail').textContent=usuario.email;
+  document.getElementById('perf-rol').textContent=rol.charAt(0).toUpperCase()+rol.slice(1);
+  document.getElementById('pf-nom').value=usuario.nombre;
+  document.getElementById('pf-mail').value=usuario.email;
+  document.getElementById('pf-tel').value=usuario.tel||'';
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 4b — MODO LOCAL (file:// sin Firebase)
+// ══════════════════════════════════════════════════════════════
+function iniciarModoLocal(){
+  // Llamado desde doLogin/doReg en modo local — solo restaura sesión
+  const ses=lsGetSes();
+  if(ses&&ses.id&&ses.email){
+    usuario=ses;CATS_ACTIVAS=[...CATS_BASE];
+    productos=lsGetProductos();checkExpiry();setupUI();
+    favs=new Set((ses.favoritos||[]).map(String));
+    updateFavBadge();buildCatChips();
+    document.getElementById('pantalla-auth').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    goTo('cat');
+  }
+}
+
+// Wrappers para que doLogin/doReg/doLogout funcionen en modo local
+const _doLoginOriginal = doLogin;
+const _doRegOriginal = doReg;
+
+async function doLogin(){
+  if(!MODO_FIREBASE){
+    // Modo local: validar contra localStorage
+    const email=document.getElementById('li-email').value.trim().toLowerCase();
+    const pass=document.getElementById('li-pass').value;
+    if(!email||!pass){toast('Completa todos los campos','err');return;}
+    const users=lsGetUsers();
+    if(!localStorage.getItem(LS.USR))lsSaveUsers([...DEMO_USERS_LOCAL]);
+    const u=lsGetUsers().find(x=>x.email===email&&x.password===pass);
+    if(!u){toast('Correo o contraseña incorrectos','err');return;}
+    usuario=u;lsSaveSes(u);
+    CATS_ACTIVAS=[...CATS_BASE];
+    productos=lsGetProductos();
+    checkExpiry();
+    setupUI();
+    favs=new Set((u.favoritos||[]).map(String));
+    updateFavBadge();buildCatChips();
+    document.getElementById('pantalla-auth').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    goTo('cat');
+  } else {
+    await _doLoginFirebase();
+  }
+}
+
+async function doReg(){
+  if(!MODO_FIREBASE){
+    // Modo local: guardar en localStorage
+    const nombre=document.getElementById('rg-nombre').value.trim();
+    const email=document.getElementById('rg-email').value.trim().toLowerCase();
+    const tel=document.getElementById('rg-tel').value.trim();
+    const pass=document.getElementById('rg-pass').value;
+    const rol=document.getElementById('rg-rol').value;
+    if(!nombre||!email||!tel||!pass){toast('Completa todos los campos obligatorios','err');return;}
+    if(!/^[0-9]{10}$/.test(tel)){toast('Teléfono debe tener 10 dígitos','err');return;}
+    if(pass.length<6){toast('Contraseña mínimo 6 caracteres','err');return;}
+    let users=lsGetUsers();
+    if(users.find(x=>x.email===email)){toast('Este correo ya está registrado','err');return;}
+    const nu={id:'u_'+Date.now(),email,password:pass,nombre,tel,rol,creditos:0,favoritos:[],histCred:[],createdAt:Date.now()};
+    users.push(nu);lsSaveUsers(users);
+    usuario=nu;lsSaveSes(nu);
+    CATS_ACTIVAS=[...CATS_BASE];
+    productos=lsGetProductos();
+    checkExpiry();setupUI();
+    favs=new Set();updateFavBadge();buildCatChips();
+    document.getElementById('pantalla-auth').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    setTimeout(()=>toast('¡Bienvenido a EmprendeMall!'),300);
+    goTo('cat');
+  } else {
+    await _doRegFirebase();
+  }
+}
+
+async function doLogout(){
+  if(!MODO_FIREBASE){
+    lsClearSes();
+    usuario=null;productos=[];carrito=[];favs=new Set();
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('pantalla-auth').classList.remove('hidden');
+    toggleUserMenu(false);
+  } else {
+    await _doLogoutFirebase();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 5 — NAVEGACIÓN
+// ══════════════════════════════════════════════════════════════
+function goTo(v){
+  const esCat=v==='cat';
+  document.getElementById('hdr-cat-bar').style.display=esCat?'':'none';
+  document.getElementById('hdr-search').style.display=esCat?'':'none';
+  ['cat','det','vendedor','favs','perfil','admin'].forEach(x=>document.getElementById('v-'+x)?.classList.add('hidden'));
+  ['cat','favs','vend','perf'].forEach(x=>{const b=document.getElementById('bn-'+x);if(b){b.classList.remove('text-blue-600');b.classList.add('text-gray-400');}});
+  const bnMap={cat:'cat',favs:'favs',vendedor:'vend',perfil:'perf'};
+  if(bnMap[v]){const b=document.getElementById('bn-'+bnMap[v]);if(b){b.classList.add('text-blue-600');b.classList.remove('text-gray-400');}}
+  if(v==='cat'){
+    document.getElementById('v-cat').classList.remove('hidden');
+    document.getElementById('bn-cat').classList.add('text-blue-600');
+    document.getElementById('bn-cat').classList.remove('text-gray-400');
+    applyFilters();
+  }
+  else if(v==='det')document.getElementById('v-det').classList.remove('hidden');
+  else if(v==='vendedor'){
+    if(usuario.rol==='cliente'){toast('Necesitas cuenta de vendedor','err');return;}
+    document.getElementById('v-vendedor').classList.remove('hidden');
+    document.getElementById('bn-vend').classList.add('text-blue-600');
+    document.getElementById('bn-vend').classList.remove('text-gray-400');
+    tabV('pub');updateCredDisplay();checkDraftsBanner();
+  }
+  else if(v==='favs'){
+    document.getElementById('v-favs').classList.remove('hidden');
+    document.getElementById('bn-favs').classList.add('text-blue-600');
+    document.getElementById('bn-favs').classList.remove('text-gray-400');
+    renderFavs();
+  }
+  else if(v==='perfil'){
+    document.getElementById('v-perfil').classList.remove('hidden');
+    document.getElementById('bn-perf').classList.add('text-blue-600');
+    document.getElementById('bn-perf').classList.remove('text-gray-400');
+  }
+  else if(v==='admin'){
+    if(usuario.rol!=='admin')return;
+    document.getElementById('v-admin').classList.remove('hidden');
+    loadAdmin();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 6 — CATÁLOGO Y FILTROS
+// ══════════════════════════════════════════════════════════════
+function buildCatChips(){
+  const cont=document.getElementById('cat-chips');cont.innerHTML='';
+  const mk=(id,label)=>{
+    const b=document.createElement('button');
+    b.className='chip flex-shrink-0'+(id===catActual?' sel':'');
+    b.textContent=label;
+    b.onclick=()=>{catActual=id;buildCatChips();buildSubFilter();applyFilters();};
+    cont.appendChild(b);
+  };
+  mk('todos','Todos');
+  CATS_ACTIVAS.forEach(c=>mk(c.id,c.nombre));
+}
+function buildSubFilter(){
+  const sel=document.getElementById('f-sub');
+  sel.innerHTML='<option value="">Todas las subcategorías</option>';
+  if(catActual==='todos')return;
+  const cat=getCatById(catActual);
+  (cat?.subs||[]).forEach(s=>sel.innerHTML+=`<option value="${s}">${s}</option>`);
+}
+function onSearch(){
+  const qd=document.getElementById('q-desktop').value;
+  const qm=document.getElementById('q-mobile').value;
+  if(document.activeElement===document.getElementById('q-desktop'))document.getElementById('q-mobile').value=qd;
+  else document.getElementById('q-desktop').value=qm;
+  applyFilters();
+}
+function toggleFiltros(){
+  const el=document.getElementById('filtros-extra');
+  const shown=!el.classList.contains('hidden');
+  el.classList.toggle('hidden',shown);
+  if(!shown)el.classList.add('grid');else el.classList.remove('grid');
+}
+function onRange(){
+  pMin=parseInt(document.getElementById('f-pmin').value);
+  pMax=parseInt(document.getElementById('f-pmax').value);
+  document.getElementById('lbl-pmin').textContent=pMin;
+  document.getElementById('lbl-pmax').textContent=pMax;
+  applyFilters();
+}
+function resetPrecio(){
+  pMin=0;pMax=9999;
+  document.getElementById('f-pmin').value=0;document.getElementById('f-pmax').value=9999;
+  document.getElementById('lbl-pmin').textContent='0';document.getElementById('lbl-pmax').textContent='9999';
+  applyFilters();
+}
+function applyFilters(){
+  const q=(document.getElementById('q-desktop')?.value||'').toLowerCase().trim();
+  const sub=document.getElementById('f-sub')?.value||'';
+  const mod=document.getElementById('f-mod')?.value||'';
+  const seg=document.getElementById('f-seg')?.value||'';
+  const ord=document.getElementById('f-orden')?.value||'rec';
+  const now=Date.now();
+  let res=productos.filter(p=>{
+    if(!p.visible||p.pausado||(p.expira&&p.expira<now))return false;
+    return(catActual==='todos'||p.catId===catActual)&&
+           (!sub||p.sub===sub)&&(!mod||p.mod===mod)&&(!seg||p.seg===seg)&&
+           (!q||(p.titulo||'').toLowerCase().includes(q)||(p.desc||'').toLowerCase().includes(q)||(p.vendedorNombre||'').toLowerCase().includes(q)||(p.negocio||'').toLowerCase().includes(q))&&
+           (p.precioFinal>=pMin&&p.precioFinal<=pMax);
+  });
+  if(ord==='vis')res.sort((a,b)=>(b.viz||0)-(a.viz||0));
+  else if(ord==='pl')res.sort((a,b)=>a.precioFinal-b.precioFinal);
+  else if(ord==='ph')res.sort((a,b)=>b.precioFinal-a.precioFinal);
+  else res.sort((a,b)=>(b.createdAt||b.id)-(a.createdAt||a.id));
+  const inf=document.getElementById('cat-info');
+  if(q||sub||mod||seg||ord!=='rec'||catActual!=='todos'){inf.textContent=`${res.length} resultado${res.length!==1?'s':''}`;inf.classList.remove('hidden');}
+  else inf.classList.add('hidden');
+  renderCat(res);
+}
+function renderCat(datos){
+  const grid=document.getElementById('grid-cat');grid.innerHTML='';
+  if(!datos.length){grid.innerHTML=`<div class="col-span-full text-center py-16"><i class="fa-solid fa-box-open text-gray-200 text-5xl mb-3"></i><p class="text-gray-400 text-base">Sin productos con estos filtros.</p></div>`;return;}
+  datos.forEach(p=>{
+    const foto=p.fotos?.[0]||'';
+    const isFav=favs.has(String(p.id));
+    let badge='',bloque=`<span class="text-base font-black text-gray-900">$${p.precioFinal.toLocaleString('es-MX')}</span>`;
+    if(p.tipoPrecio==='remate'){badge=`<span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-extrabold px-2 py-0.5 rounded-full shadow">REMATE</span>`;bloque=`<span class="text-base font-black text-red-500">$${p.precioFinal.toLocaleString('es-MX')}</span>`;}
+    else if(p.tipoPrecio==='pct'){badge=`<span class="absolute top-2 left-2 bg-green-500 text-white text-xs font-extrabold px-2 py-0.5 rounded-full shadow">${p.dpct}% OFF</span>`;bloque=`<div><span class="text-base font-black text-green-600">$${p.precioFinal.toLocaleString('es-MX')}</span><br><span class="text-xs text-gray-300 line-through">$${p.precio.toLocaleString('es-MX')}</span></div>`;}
+    const agotado=p.stock<=0?`<span class="absolute top-2 right-8 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">AGOTADO</span>`:'';
+    const prom=p.comentarios?.length?(p.comentarios.reduce((s,c)=>s+(c.stars||0),0)/p.comentarios.length).toFixed(1):null;
+    const attrsStr=Object.values(p.attrs||{}).filter(Boolean).slice(0,2).join(' · ');
+    // Mostrar nombre del vendedor y negocio
+    const vendInfo=p.negocio?`${p.vendedorNombre} · ${p.negocio}`:p.vendedorNombre||'';
+    grid.innerHTML+=`<div class="card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col cursor-pointer" onclick="openDet('${p.id}')">
+      <div class="relative bg-gray-50 overflow-hidden" style="aspect-ratio:1">
+        <img src="${foto}" alt="${p.titulo}" class="w-full h-full object-cover" loading="lazy">
+        ${badge}${agotado}
+        <button onclick="event.stopPropagation();toggleFav('${p.id}')" class="absolute top-2 right-2 w-7 h-7 flex items-center justify-center bg-white/90 rounded-full shadow text-sm ${isFav?'text-red-500':'text-gray-300'} hover:text-red-400 transition">
+          <i class="fa-${isFav?'solid':'regular'} fa-heart"></i>
+        </button>
+      </div>
+      <div class="p-3 flex flex-col flex-1 gap-1">
+        <p class="text-xs font-bold text-gray-400 truncate"><i class="fa-solid fa-shop text-[10px] mr-1"></i>${vendInfo}</p>
+        <h3 class="text-sm font-bold text-gray-900 leading-snug flex-1" style="-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden">${p.titulo}</h3>
+        ${attrsStr?`<p class="text-xs text-gray-400">${attrsStr}</p>`:''}
+        ${prom?`<div class="flex items-center gap-1"><i class="fa-solid fa-star text-yellow-400 text-xs"></i><span class="text-xs font-bold text-gray-700">${prom}</span><span class="text-xs text-gray-400">(${p.comentarios.length})</span></div>`:''}
+        <div class="flex justify-between items-end mt-1 pt-1.5 border-t border-gray-50">
+          ${bloque}
+          <div class="flex gap-1.5">
+            <button onclick="event.stopPropagation();openWA('${p.id}')" class="w-7 h-7 flex items-center justify-center bg-green-50 text-green-600 rounded-lg text-sm hover:bg-green-100 transition" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
+            <button onclick="event.stopPropagation();addToCart('${p.id}',1)" ${p.stock<=0?'disabled':''} class="w-7 h-7 flex items-center justify-center bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 transition" title="Agregar"><i class="fa-solid fa-cart-plus"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 7 — DETALLE DE PRODUCTO
+// ══════════════════════════════════════════════════════════════
+async function openDet(id){
+  const p=productos.find(x=>String(x.id)===String(id));if(!p)return;
+  // Registrar visualización en Firestore
+  p.viz=(p.viz||0)+1;
+  await fbSaveProducto({id:p.id,viz:p.viz});
+  goTo('det');
+  document.getElementById('res-pid').value=id;
+  const isFav=favs.has(String(id));
+  const cat=getCatById(p.catId);
+  let blPrecio=`<div class="text-4xl font-black text-gray-900">$${p.precioFinal.toLocaleString('es-MX')}</div>`;
+  if(p.tipoPrecio==='remate')blPrecio=`<div class="text-4xl font-black text-red-500">$${p.precioFinal.toLocaleString('es-MX')}<span class="text-base text-gray-400 line-through ml-2">$${p.precio.toLocaleString('es-MX')}</span></div>`;
+  else if(p.tipoPrecio==='pct')blPrecio=`<div class="text-4xl font-black text-green-600">$${p.precioFinal.toLocaleString('es-MX')}<span class="ml-2 text-sm bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">${p.dpct}% OFF</span></div><div class="text-sm text-gray-400 line-through">$${p.precio.toLocaleString('es-MX')}</div>`;
+  const prom=p.comentarios?.length?(p.comentarios.reduce((s,c)=>s+(c.stars||0),0)/p.comentarios.length).toFixed(1):null;
+  const attrsHtml=Object.entries(p.attrs||{}).filter(([k,v])=>v).map(([k,v])=>{
+    const def=cat?.attrs?.find(a=>a.id===k);
+    return`<div><span class="text-xs text-gray-400 block">${def?.label||k}</span><span class="text-sm font-bold text-gray-800">${v}</span></div>`;
+  }).join('');
+  const varHtml=p.variantes?.length?`<div class="space-y-2"><p class="text-sm font-bold text-gray-700">Variantes disponibles:</p><div class="flex flex-wrap gap-2" id="det-vars">${p.variantes.map((v,i)=>`<button class="chip${i===0?' sel':''}" onclick="selVar(this,${v.stock||p.stock})">${v.nombre} <span class="text-[9px] opacity-70">(${v.stock||p.stock})</span></button>`).join('')}</div></div>`:'';
+  // Mostrar nombre vendedor + negocio + dirección
+  const negInfo=p.negocio?`<span class="text-sm bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-lg">${p.negocio}</span>`:'';
+  const dirInfo=p.direccion?`<div class="flex items-center gap-1.5 text-xs text-gray-500 mt-1"><i class="fa-solid fa-location-dot text-gray-400"></i>${p.direccion}</div>`:'';
+  document.getElementById('det-content').innerHTML=`<div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="bg-gray-50 relative"><img id="det-img" src="${p.fotos?.[0]||''}" class="w-full object-contain max-h-72 mx-auto p-2">
+    <button onclick="toggleFav('${p.id}')" id="det-fav-btn" class="absolute top-3 right-3 w-9 h-9 flex items-center justify-center bg-white rounded-full shadow ${isFav?'text-red-500':'text-gray-300'} text-xl"><i class="fa-${isFav?'solid':'regular'} fa-heart"></i></button></div>
+    ${p.fotos?.length>1?`<div class="flex gap-2 p-3 overflow-x-auto ns">${p.fotos.map((f,i)=>`<img src="${f}" class="imt${i===0?' on':''}" onclick="document.getElementById('det-img').src='${f}';document.querySelectorAll('.imt').forEach(x=>x.classList.remove('on'));this.classList.add('on')">`).join('')}</div>`:''}
+    <div class="p-5 space-y-3">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-sm bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-lg"><i class="fa-solid fa-user mr-1"></i>${p.vendedorNombre||''}</span>
+        ${negInfo}
+        ${cat?`<span class="text-sm bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-lg">${cat.nombre}</span>`:''}
+        ${p.sub?`<span class="text-sm bg-gray-50 text-gray-500 font-semibold px-2 py-0.5 rounded-lg">${p.sub}</span>`:''}
+      </div>
+      ${dirInfo}
+      <h1 class="text-xl font-black text-gray-900 leading-tight">${p.titulo}</h1>
+      ${blPrecio}
+      ${prom?`<div class="flex items-center gap-1"><i class="fa-solid fa-star text-yellow-400 text-sm"></i><span class="font-bold">${prom}</span><span class="text-sm text-gray-400">(${p.comentarios.length} reseñas)</span></div>`:''}
+      ${attrsHtml?`<div class="grid grid-cols-2 gap-2 bg-gray-50 rounded-xl p-3">${attrsHtml}</div>`:''}
+      ${varHtml}
+      <p class="text-sm text-gray-600 leading-relaxed">${p.desc}</p>
+      <div class="flex items-center gap-2 text-sm font-semibold ${p.stock>0?'text-green-700 bg-green-50':'text-red-600 bg-red-50'} rounded-xl px-3 py-2">
+        <i class="fa-solid fa-${p.stock>0?'check-circle':'times-circle'}"></i>
+        ${p.stock>0?`${p.stock} unidades disponibles`:'AGOTADO'}
+      </div>
+      <div class="flex gap-2">
+        <input type="number" id="det-qty" min="1" max="${p.stock}" value="${p.mod==='Mayoreo'?p.minMay:1}" class="w-16 inf text-center font-bold text-base">
+        <button onclick="addToCart('${p.id}',document.getElementById('det-qty').value)" ${p.stock<=0?'disabled':''} class="flex-1 bg-blue-600 text-white font-bold rounded-xl text-sm py-3 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 flex items-center justify-center gap-2 transition">
+          <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
+        </button>
+      </div>
+      <button onclick="openWA('${p.id}')" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl text-sm py-3 flex items-center justify-center gap-2 transition">
+        <i class="fa-brands fa-whatsapp text-base"></i> Contactar por WhatsApp
+      </button>
+    </div>
+  </div>`;
+  renderResenas(p.comentarios);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function selVar(btn,stock){
+  document.querySelectorAll('#det-vars .chip').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');
+  const q=document.getElementById('det-qty');if(q){q.max=stock;if(parseInt(q.value)>stock)q.value=stock;}
+}
+function renderResenas(rs){
+  const c=document.getElementById('resenas-lista');
+  if(!rs?.length){c.innerHTML=`<p class="text-sm text-gray-400 text-center py-6 border border-dashed rounded-xl bg-gray-50">Sin reseñas aún. ¡Sé el primero!</p>`;return;}
+  c.innerHTML=rs.map(r=>{const st=Array.from({length:5},(_,i)=>`<i class="fa-solid fa-star text-xs ${i<(r.stars||0)?'text-yellow-400':'text-gray-200'}"></i>`).join('');return`<div class="bg-white rounded-xl p-3.5 border border-gray-100 shadow-sm"><div class="flex justify-between items-center mb-1"><span class="text-sm font-bold text-gray-900">${r.nombre}</span><div class="flex gap-0.5">${st}</div></div><p class="text-sm text-gray-600 leading-relaxed">${r.texto}</p></div>`}).join('');
+}
+function setStar(n){
+  document.getElementById('res-stars').value=n;
+  document.querySelectorAll('.sv').forEach((s,i)=>{s.className=`fa-solid fa-star sv text-xl cursor-pointer ${i<n?'text-yellow-400':'text-gray-200'}`;});
+}
+async function saveResena(){
+  const id=document.getElementById('res-pid').value;
+  const nom=document.getElementById('res-nombre').value.trim();
+  const tex=document.getElementById('res-texto').value.trim();
+  const sts=parseInt(document.getElementById('res-stars').value);
+  if(!nom||!tex){toast('Completa nombre y reseña','err');return;}
+  const p=productos.find(x=>String(x.id)===String(id));if(!p)return;
+  if(!p.comentarios)p.comentarios=[];
+  p.comentarios.unshift({nombre:nom,stars:sts,texto:tex,f:Date.now()});
+  await fbSaveProducto({id:p.id,comentarios:p.comentarios});
+  renderResenas(p.comentarios);
+  document.getElementById('res-nombre').value='';document.getElementById('res-texto').value='';setStar(5);
+  toast('¡Reseña publicada!');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 8 — FAVORITOS
+// ══════════════════════════════════════════════════════════════
+async function toggleFav(id){
+  const s=String(id);
+  favs.has(s)?favs.delete(s):favs.add(s);
+  updateFavBadge();applyFilters();
+  // Actualizar en Firestore
+  await fbSaveUser({id:usuario.id,favoritos:[...favs]});
+  toast(favs.has(s)?'Agregado a favoritos':'Eliminado de favoritos');
+  // Actualizar ícono en detalle si está abierto
+  const detBtn=document.getElementById('det-fav-btn');
+  if(detBtn){
+    detBtn.className=detBtn.className.replace(/text-(red-500|gray-300)/,favs.has(s)?'text-red-500':'text-gray-300');
+    detBtn.querySelector('i').className=`fa-${favs.has(s)?'solid':'regular'} fa-heart`;
+  }
+}
+function updateFavBadge(){
+  const b=document.getElementById('bdg-fav');if(!b)return;
+  b.textContent=favs.size;b.style.display=favs.size>0?'flex':'none';
+}
+function renderFavs(){
+  const grid=document.getElementById('favs-grid');
+  const fp=productos.filter(p=>favs.has(String(p.id)));
+  if(!fp.length){grid.innerHTML=`<div class="col-span-full text-center py-16"><i class="fa-solid fa-heart text-gray-200 text-5xl mb-3"></i><p class="text-gray-400 text-base">Sin favoritos todavía.</p><button onclick="goTo('cat')" class="mt-3 text-sm text-blue-600 hover:underline">Explorar catálogo →</button></div>`;return;}
+  grid.innerHTML=fp.map(p=>`<div class="card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer" onclick="openDet('${p.id}')">
+    <div class="relative bg-gray-50" style="aspect-ratio:1"><img src="${p.fotos?.[0]||''}" class="w-full h-full object-cover">
+    <button onclick="event.stopPropagation();toggleFav('${p.id}');renderFavs()" class="absolute top-2 right-2 w-7 h-7 flex items-center justify-center bg-white/90 rounded-full shadow text-red-500 text-sm"><i class="fa-solid fa-heart"></i></button></div>
+    <div class="p-3"><p class="text-xs text-gray-400 truncate">${p.negocio||p.vendedorNombre}</p><p class="text-sm font-bold text-gray-900">${p.titulo}</p>
+    <div class="flex justify-between items-center mt-2"><span class="text-base font-black text-gray-900">$${p.precioFinal.toLocaleString('es-MX')}</span>
+    <button onclick="event.stopPropagation();addToCart('${p.id}',1)" class="w-7 h-7 flex items-center justify-center bg-blue-600 text-white rounded-lg text-sm"><i class="fa-solid fa-cart-plus"></i></button></div></div>
+  </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 9 — WHATSAPP
+// ══════════════════════════════════════════════════════════════
+async function openWA(id){
+  const p=productos.find(x=>String(x.id)===String(id));if(!p)return;
+  p.cliWA=(p.cliWA||0)+1;
+  await fbSaveProducto({id:p.id,cliWA:p.cliWA});
+  const dir=p.direccion?`\n📍 ${p.direccion}`:'';
+  const neg=p.negocio?`\n🏪 ${p.negocio}`:'';
+  const msg=`Hola ${p.vendedorNombre}, vi tu producto en EmprendeMall:\n\n*${p.titulo}*${neg}${dir}\nPrecio: $${p.precioFinal.toLocaleString('es-MX')} MXN\n\n¿Tienes disponibilidad?`;
+  window.open(`https://wa.me/52${p.wa}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 10 — CARRITO
+// ══════════════════════════════════════════════════════════════
+function addToCart(id,qty){
+  const p=productos.find(x=>String(x.id)===String(id));
+  if(!p||p.stock<=0){toast('Sin stock disponible','err');return;}
+  let q=parseInt(qty)||1;
+  if(p.mod==='Mayoreo'&&q<p.minMay){q=p.minMay;toast(`Mínimo ${p.minMay} piezas`);}
+  if(q>p.stock){toast(`Solo ${p.stock} disponibles`,'err');return;}
+  const ex=carrito.find(i=>i.id===String(id));
+  if(ex){if(ex.qty+q>p.stock){toast(`Stock máximo: ${p.stock}`,'err');return;}ex.qty+=q;}
+  else carrito.push({id:String(id),qty:q});
+  updateCartBadge();toast(`"${p.titulo}" agregado`);
+}
+function removeFromCart(id){carrito=carrito.filter(i=>i.id!==String(id));updateCartBadge();renderCartItems();}
+function updateQtyCart(id,el){
+  const p=productos.find(x=>String(x.id)===String(id));if(!p)return;
+  let v=parseInt(el.value)||1;
+  if(p.mod==='Mayoreo'&&v<p.minMay){v=p.minMay;el.value=v;}
+  if(v>p.stock){v=p.stock;el.value=v;}
+  const it=carrito.find(i=>i.id===String(id));if(it){it.qty=v;calcCartTotals();}
+}
+function updateCartBadge(){
+  const tot=carrito.reduce((s,i)=>s+i.qty,0);
+  const b=document.getElementById('bdg-cart');
+  b.textContent=tot;tot>0?b.classList.remove('hidden'):b.classList.add('hidden');
+  calcCartTotals();
+}
+function calcCartTotals(){
+  let sub=0;carrito.forEach(it=>{const p=productos.find(x=>String(x.id)===it.id);if(p)sub+=p.precioFinal*it.qty;});
+  document.getElementById('cart-sub').textContent=`$${sub.toLocaleString('es-MX')}`;
+  document.getElementById('cart-total').textContent=`$${sub.toLocaleString('es-MX')}`;
+}
+function openCart(){
+  renderCartItems();
+  const m=document.getElementById('modal-cart'),b=document.getElementById('cart-body');
+  m.classList.remove('hidden');setTimeout(()=>{m.classList.remove('opacity-0');b.classList.remove('translate-x-full');},30);
+}
+function closeCart(){
+  const m=document.getElementById('modal-cart'),b=document.getElementById('cart-body');
+  m.classList.add('opacity-0');b.classList.add('translate-x-full');
+  setTimeout(()=>m.classList.add('hidden'),300);
+}
+function renderCartItems(){
+  const cont=document.getElementById('cart-items');
+  if(!carrito.length){cont.innerHTML=`<div class="text-center py-10"><i class="fa-solid fa-cart-shopping text-gray-200 text-4xl mb-3"></i><p class="text-sm text-gray-400">Carrito vacío</p></div>`;return;}
+  cont.innerHTML=carrito.map(it=>{
+    const p=productos.find(x=>String(x.id)===it.id);if(!p)return'';
+    return`<div class="flex gap-3 items-center bg-gray-50 rounded-xl p-3"><img src="${p.fotos?.[0]||''}" class="w-12 h-12 object-cover rounded-xl border border-gray-100 flex-shrink-0">
+    <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">${p.titulo}</p><p class="text-xs text-gray-400">${p.negocio||p.vendedorNombre}</p>
+    <div class="flex items-center gap-2 mt-1"><input type="number" value="${it.qty}" min="1" max="${p.stock}" onchange="updateQtyCart('${p.id}',this)" class="w-14 inf py-1 text-center text-sm font-bold"><span class="text-sm font-black text-blue-600">$${(p.precioFinal*it.qty).toLocaleString('es-MX')}</span></div></div>
+    <button onclick="removeFromCart('${p.id}')" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-trash text-sm"></i></button></div>`;
+  }).join('');
+  calcCartTotals();
+}
+function cancelCart(){if(!confirm('¿Vaciar el carrito?'))return;carrito=[];updateCartBadge();closeCart();}
+function confirmCart(){
+  if(!carrito.length){toast('Carrito vacío','err');return;}
+  const folio='EM-'+Date.now().toString(36).toUpperCase().slice(-8);
+  const fecha=new Date().toLocaleString('es-MX');
+  let msg=`🛒 *PEDIDO EmprendeMall V4*\n📋 Folio: *${folio}*\n📅 ${fecha}\n\n`;
+  let total=0;const resumen=[];
+  carrito.forEach(it=>{
+    const p=productos.find(x=>String(x.id)===it.id);if(!p)return;
+    const sub=p.precioFinal*it.qty;
+    msg+=`▪ ${p.titulo} x${it.qty} = $${sub.toLocaleString('es-MX')}\n`;
+    total+=sub;
+    resumen.push({titulo:p.titulo,vendedor:p.vendedorNombre,negocio:p.negocio||'',qty:it.qty,sub,wa:p.wa,foto:p.fotos?.[0]||''});
+  });
+  msg+=`\n*Total: $${total.toLocaleString('es-MX')} MXN*\n_Logística: ENGO Express_\n\n⚠️ Pedido pendiente de confirmación por el vendedor.`;
+  pedidoPendiente={folio,msg,total,items:resumen};
+  document.getElementById('venta-folio').textContent=folio;
+  document.getElementById('venta-total').textContent=`$${total.toLocaleString('es-MX')}`;
+  document.getElementById('venta-resumen').innerHTML=resumen.map(r=>`<div class="flex items-center gap-2.5 bg-gray-50 rounded-xl p-2.5"><img src="${r.foto}" class="w-10 h-10 object-cover rounded-lg flex-shrink-0 border border-gray-100"><div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">${r.titulo}</p><p class="text-xs text-gray-400">${r.negocio||r.vendedor} · x${r.qty}</p></div><span class="text-sm font-black text-blue-600">$${r.sub.toLocaleString('es-MX')}</span></div>`).join('');
+  closeCart();
+  document.getElementById('modal-venta').classList.remove('hidden');
+}
+function cancelarVenta(){document.getElementById('modal-venta').classList.add('hidden');pedidoPendiente={folio:'',msg:'',total:0,items:[]};}
+function enviarPedidoWA(){
+  if(!pedidoPendiente.folio){toast('Sin pedido pendiente','err');return;}
+  const wa=pedidoPendiente.items[0]?.wa||'4491234567';
+  document.getElementById('modal-venta').classList.add('hidden');
+  carrito=[];updateCartBadge();applyFilters();
+  toast(`¡Pedido ${pedidoPendiente.folio} enviado! El vendedor confirmará.`);
+  setTimeout(()=>window.open(`https://wa.me/52${wa}?text=${encodeURIComponent(pedidoPendiente.msg)}`,'_blank'),600);
+  pedidoPendiente={folio:'',msg:'',total:0,items:[]};
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 11 — PUBLICACIÓN CON ATRIBUTOS DINÁMICOS
+// ══════════════════════════════════════════════════════════════
+function buildPubCatSelect(){
+  const sel=document.getElementById('p-cat');if(!sel)return;
+  sel.innerHTML=CATS_ACTIVAS.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  onCatChange();
+}
+function onCatChange(){
+  const catId=document.getElementById('p-cat')?.value;
+  const cat=getCatById(catId);
+  const sub=document.getElementById('p-sub');
+  sub.innerHTML='<option value="">— Sin subcategoría —</option>';
+  (cat?.subs||[]).forEach(s=>sub.innerHTML+=`<option value="${s}">${s}</option>`);
+  renderAttrsDin(cat);
+}
+function renderAttrsDin(cat){
+  const box=document.getElementById('attrs-box');if(!box)return;
+  if(!cat?.attrs?.length){box.innerHTML='';document.getElementById('vars-section').classList.add('hidden');return;}
+  box.innerHTML=`<div class="bg-blue-50 border border-blue-200 rounded-xl p-3.5 space-y-2.5">
+    <p class="text-sm font-bold text-blue-800 uppercase tracking-wide"><i class="fa-solid fa-tags mr-1.5"></i>Atributos de ${cat.nombre}</p>
+    <div class="grid grid-cols-2 gap-2.5">
+      ${cat.attrs.map(a=>{
+        if(a.tipo==='sel')return`<div><label class="lf">${a.label}</label><select id="attr-${a.id}" class="inf text-sm"><option value="">Seleccionar</option>${(a.ops||[]).map(o=>`<option>${o}</option>`).join('')}</select></div>`;
+        return`<div><label class="lf">${a.label}</label><input type="text" id="attr-${a.id}" placeholder="${a.label}" class="inf text-sm"></div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  document.getElementById('vars-section').classList.remove('hidden');
+}
+function collectAttrs(){
+  const catId=document.getElementById('p-cat')?.value;
+  const cat=getCatById(catId);const attrs={};
+  (cat?.attrs||[]).forEach(a=>{const el=document.getElementById('attr-'+a.id);if(el)attrs[a.id]=el.value;});
+  return attrs;
+}
+function addVar(){
+  varIdx++;const cont=document.getElementById('vars-list');
+  const div=document.createElement('div');div.id='vr-'+varIdx;div.className='flex gap-2 items-center fi';
+  div.innerHTML=`<input type="text" placeholder="Nombre variante (ej. Talla M)" id="vn-${varIdx}" class="inf text-sm flex-1"><input type="number" placeholder="Stock" min="0" id="vs-${varIdx}" class="inf text-sm w-20"><button onclick="rmVar(${varIdx})" class="text-red-400 hover:text-red-600 px-2 text-lg leading-none">&times;</button>`;
+  cont.appendChild(div);
+}
+function rmVar(i){document.getElementById('vr-'+i)?.remove();}
+function collectVars(){
+  return[...document.querySelectorAll('[id^="vr-"]')].map(r=>{
+    const i=r.id.replace('vr-','');
+    return{nombre:document.getElementById('vn-'+i)?.value||'',stock:parseInt(document.getElementById('vs-'+i)?.value||0)||0};
+  }).filter(v=>v.nombre);
+}
+function onModChange(){
+  const mod=document.getElementById('p-mod')?.value;
+  document.getElementById('may-min-box').classList.toggle('hidden',mod!=='Mayoreo');
+  const ls=document.getElementById('lbl-stock'),lp=document.getElementById('lbl-precio');
+  if(ls)ls.textContent=mod==='Granel'?'Peso/Volumen disponible':'Stock inicial';
+  if(lp)lp.textContent=mod==='Granel'?'Precio por unidad ($)':'Precio ($ MXN)';
+}
+function onTipoPrecio(){
+  const t=document.getElementById('p-tprecio')?.value;
+  document.getElementById('desc-box').classList.toggle('hidden',t!=='pct');
+  calcPrecio();
+}
+function calcPrecio(){
+  const tipo=document.getElementById('p-tprecio')?.value;
+  const precio=parseFloat(document.getElementById('p-precio')?.value)||0;
+  const pct=parseFloat(document.getElementById('p-dpct')?.value)||0;
+  const prev=document.getElementById('precio-preview'),val=document.getElementById('pf-val');
+  if(!prev||!val)return;
+  if(tipo==='pct'&&precio>0){prev.classList.remove('hidden');val.textContent=`$${Math.round(precio-precio*pct/100).toLocaleString('es-MX')}`;}
+  else prev.classList.add('hidden');
+}
+function abrirCamara(){const inp=document.getElementById('input-camara');if(!inp)return;inp.value='';inp.click();}
+function addFotos(input){
+  [...input.files].forEach(file=>{
+    if(fotosTemp.length>=5)return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const mw=800,mh=800;let w=img.width,h=img.height;
+        if(w>mw){h=h*(mw/w);w=mw;}if(h>mh){w=w*(mh/h);h=mh;}
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        fotosTemp.push(c.toDataURL('image/jpeg',0.75));
+        renderFotosPrev();
+      };img.src=e.target.result;
+    };reader.readAsDataURL(file);
+  });
+}
+function rmFoto(i){fotosTemp.splice(i,1);renderFotosPrev();}
+function renderFotosPrev(){
+  const c=document.getElementById('fotos-prev');if(!c)return;
+  c.innerHTML=fotosTemp.map((f,i)=>`<div class="relative flex-shrink-0"><img src="${f}" class="w-14 h-14 object-cover rounded-xl border border-gray-200"><button onclick="rmFoto(${i})" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold leading-none">&times;</button></div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 12 — BORRADORES (localStorage — no necesitan sync)
+// ══════════════════════════════════════════════════════════════
+function collectForm(){
+  return{
+    vendedor:document.getElementById('p-vendedor')?.value||'',
+    negocio:document.getElementById('p-neg')?.value||'',
+    direccion:document.getElementById('p-direccion')?.value||'',
+    titulo:document.getElementById('p-tit')?.value||'',
+    catId:document.getElementById('p-cat')?.value||'',
+    sub:document.getElementById('p-sub')?.value||'',
+    attrs:collectAttrs(),
+    mod:document.getElementById('p-mod')?.value||'Menudeo',
+    minMay:document.getElementById('p-minmay')?.value||6,
+    tipoPrecio:document.getElementById('p-tprecio')?.value||'regular',
+    dpct:document.getElementById('p-dpct')?.value||0,
+    precio:document.getElementById('p-precio')?.value||'',
+    stock:document.getElementById('p-stock')?.value||'',
+    wa:document.getElementById('p-wa')?.value||'',
+    pago:document.getElementById('p-pago')?.value||'Ambos',
+    desc:document.getElementById('p-desc')?.value||'',
+    engo:{
+      peso:document.getElementById('e-peso')?.value||'',
+      largo:document.getElementById('e-largo')?.value||'',
+      ancho:document.getElementById('e-ancho')?.value||'',
+      alto:document.getElementById('e-alto')?.value||'',
+      ciudad:document.getElementById('e-ciudad')?.value||'Aguascalientes',
+      tipo:document.getElementById('e-tipo')?.value||'ENGO'
+    },
+    fotos:[...fotosTemp],variantes:collectVars()
+  };
+}
+function saveDraft(){
+  const data=collectForm();
+  if(!data.titulo&&!data.negocio){toast('Agrega al menos título o negocio','err');return;}
+  const ds=JSON.parse(localStorage.getItem(LS.DRAF)||'[]');
+  ds.unshift({id:Date.now(),fecha:Date.now(),titulo:data.titulo||data.negocio||'Borrador',data});
+  if(ds.length>10)ds.pop();
+  localStorage.setItem(LS.DRAF,JSON.stringify(ds));
+  toast('Borrador guardado');checkDraftsBanner();
+}
+function checkDraftsBanner(){
+  const ds=JSON.parse(localStorage.getItem(LS.DRAF)||'[]');
+  document.getElementById('drafts-banner').classList.toggle('hidden',ds.length===0);
+}
+function openDrafts(){
+  const ds=JSON.parse(localStorage.getItem(LS.DRAF)||'[]');
+  const lista=document.getElementById('drafts-list');
+  lista.innerHTML=!ds.length?`<p class="text-sm text-gray-400 text-center py-6">Sin borradores.</p>`:
+    ds.map(d=>`<div class="bg-gray-50 rounded-xl p-3.5 border border-gray-100 space-y-2">
+      <div class="flex justify-between items-start">
+        <div><p class="text-sm font-bold text-gray-900">${d.titulo}</p><p class="text-xs text-gray-400">${new Date(d.fecha).toLocaleString('es-MX')}</p></div>
+        <button onclick="delDraft(${d.id})" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-trash text-sm"></i></button>
+      </div>
+      <button onclick="loadDraft(${d.id})" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-blue-700">Continuar edición</button>
+    </div>`).join('');
+  document.getElementById('modal-drafts').classList.remove('hidden');
+}
+function closeDrafts(){document.getElementById('modal-drafts').classList.add('hidden');}
+function delDraft(id){
+  let ds=JSON.parse(localStorage.getItem(LS.DRAF)||'[]').filter(d=>d.id!==id);
+  localStorage.setItem(LS.DRAF,JSON.stringify(ds));openDrafts();checkDraftsBanner();
+}
+function loadDraft(id){
+  const ds=JSON.parse(localStorage.getItem(LS.DRAF)||'[]');
+  const d=ds.find(x=>x.id===id);if(!d)return;
+  const f=d.data;
+  const set=(eid,val)=>{const el=document.getElementById(eid);if(el)el.value=val||'';};
+  set('p-vendedor',f.vendedor);set('p-neg',f.negocio);set('p-direccion',f.direccion);set('p-tit',f.titulo);
+  buildPubCatSelect();set('p-cat',f.catId);onCatChange();
+  setTimeout(()=>{
+    set('p-sub',f.sub||'');
+    (getCatById(f.catId)?.attrs||[]).forEach(a=>set('attr-'+a.id,f.attrs?.[a.id]||''));
+    set('p-mod',f.mod);onModChange();set('p-minmay',f.minMay);
+    set('p-tprecio',f.tipoPrecio);onTipoPrecio();set('p-dpct',f.dpct);
+    set('p-precio',f.precio);calcPrecio();set('p-stock',f.stock);
+    set('p-wa',f.wa);set('p-pago',f.pago);set('p-desc',f.desc);
+    if(f.engo){set('e-peso',f.engo.peso);set('e-largo',f.engo.largo);set('e-ancho',f.engo.ancho);set('e-alto',f.engo.alto);set('e-ciudad',f.engo.ciudad);set('e-tipo',f.engo.tipo);}
+    fotosTemp=[...(f.fotos||[])];renderFotosPrev();
+    document.getElementById('vars-list').innerHTML='';varIdx=0;
+    (f.variantes||[]).forEach(v=>{addVar();const i=varIdx;setTimeout(()=>{set('vn-'+i,v.nombre);set('vs-'+i,v.stock);},60);});
+  },120);
+  closeDrafts();toast('Borrador cargado. Continúa editando.');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 13 — PUBLICAR PRODUCTO (guarda en Firestore)
+// ══════════════════════════════════════════════════════════════
+async function doPublicar(){
+  // Verificar créditos desde Firestore (datos frescos)
+  showLoad('Verificando créditos...');
+  const u=await fbGetUser(usuario.id);
+  hideLoad();
+  if(!u||u.creditos<10){toast('Necesitas al menos 10 créditos','err');tabV('cred');return;}
+
+  const vendedor=document.getElementById('p-vendedor')?.value.trim();
+  const negocio=document.getElementById('p-neg')?.value.trim();
+  const direccion=document.getElementById('p-direccion')?.value.trim();
+  const titulo=document.getElementById('p-tit')?.value.trim();
+  const precio=parseInt(document.getElementById('p-precio')?.value)||0;
+  const stock=parseInt(document.getElementById('p-stock')?.value)||0;
+  const wa=document.getElementById('p-wa')?.value.trim();
+  const desc=document.getElementById('p-desc')?.value.trim();
+
+  if(!vendedor||!negocio||!titulo||!precio||!stock||!wa||!desc){
+    toast('Completa todos los campos obligatorios (*)','err');return;
+  }
+  const tipoPrecio=document.getElementById('p-tprecio')?.value||'regular';
+  const dpct=tipoPrecio==='pct'?parseInt(document.getElementById('p-dpct')?.value)||0:0;
+  const precioFinal=tipoPrecio==='pct'?Math.round(precio-precio*dpct/100):precio;
+  const engo={
+    peso:document.getElementById('e-peso')?.value||0,
+    largo:document.getElementById('e-largo')?.value||0,
+    ancho:document.getElementById('e-ancho')?.value||0,
+    alto:document.getElementById('e-alto')?.value||0,
+    ciudad:document.getElementById('e-ciudad')?.value||'Aguascalientes',
+    tipo:document.getElementById('e-tipo')?.value||'ENGO'
+  };
+  const idProducto=Date.now().toString();
+  const nuevo={
+    id:idProducto,
+    vendedorId:usuario.id,
+    vendedorNombre:vendedor,
+    negocio,direccion,titulo,
+    catId:document.getElementById('p-cat')?.value,
+    sub:document.getElementById('p-sub')?.value||'',
+    attrs:collectAttrs(),variantes:collectVars(),
+    mod:document.getElementById('p-mod')?.value||'Menudeo',
+    minMay:parseInt(document.getElementById('p-minmay')?.value)||1,
+    seg:'Unisex',desc,precio,tipoPrecio,dpct,precioFinal,
+    wa,pago:document.getElementById('p-pago')?.value||'Ambos',
+    stock,vendidos:0,comentarios:[],
+    logistica:engo.tipo,engo,
+    fotos:fotosTemp.length>0?[...fotosTemp]:['https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=600&auto=format&fit=crop&q=60'],
+    visible:true,expira:Date.now()+30*864e5,pausado:false,viz:0,cliWA:0,
+    createdAt: Date.now(),
+    creadoPor: usuario.id
+  };
+
+  showLoad('Publicando producto...');
+  try{
+    // Guardar en Firestore
+    await fbSaveProducto(nuevo);
+    // Descontar créditos
+    const nuevosCreds=u.creditos-10;
+    const histCred=[{t:'pub',n:-10,f:Date.now(),nota:`Publicación: "${titulo}"`},...(u.histCred||[])];
+    await fbSaveUser({id:usuario.id,creditos:nuevosCreds,histCred});
+    usuario.creditos=nuevosCreds;
+    // Agregar al array local para reflejar sin recargar
+    productos.unshift(nuevo);
+    // Reset form
+    ['p-vendedor','p-neg','p-direccion','p-tit','p-precio','p-stock','p-wa','p-desc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    fotosTemp=[];renderFotosPrev();varIdx=0;document.getElementById('vars-list').innerHTML='';
+    buildPubCatSelect();updateCredDisplay();renderUltimasPubs();
+    hideLoad();
+    toast('¡Producto publicado! 10 créditos descontados.');
+  }catch(e){
+    hideLoad();
+    if(e.code==='permission-denied'){
+      toast('Error de permisos. Debes configurar las Reglas de Firestore en Firebase Console.','err');
+    } else {
+      toast('Error al publicar: '+e.message,'err');
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 14 — CRÉDITOS
+// ══════════════════════════════════════════════════════════════
+async function updateCredDisplay(){
+  const u=await fbGetUser(usuario.id);
+  if(!u)return;
+  const n=u.creditos||0;usuario.creditos=n;
+  ['hdr-cred-n','cred-ring-n','pub-cred','cred-big'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=n;});
+  const ring=document.getElementById('cred-ring');if(ring)ring.style.strokeDashoffset=163-(163*n/100);
+  const bar=document.getElementById('cred-bar');if(bar)bar.style.width=`${n}%`;
+  renderCredHist(u.histCred||[]);
+}
+async function addCredits(n){
+  showLoad('Actualizando créditos...');
+  const u=await fbGetUser(usuario.id);
+  hideLoad();if(!u)return;
+  const nuevo=Math.min(u.creditos+n,100);const real=nuevo-u.creditos;
+  if(!real){toast('Ya tienes 100 créditos (máximo)','err');return;}
+  const histCred=[{t:'recarga',n:real,f:Date.now(),nota:`Recarga +${real} créditos`},...(u.histCred||[])];
+  await fbSaveUser({id:usuario.id,creditos:nuevo,histCred});
+  usuario.creditos=nuevo;updateCredDisplay();
+  toast(`+${real} créditos agregados`);
+}
+function renderCredHist(hist){
+  const c=document.getElementById('cred-hist');if(!c)return;
+  if(!hist?.length){c.innerHTML=`<p class="text-sm text-gray-400 text-center py-4">Sin movimientos.</p>`;return;}
+  c.innerHTML=hist.slice(0,10).map(h=>`<div class="flex justify-between items-center py-2 border-b border-gray-50 text-sm"><div><span class="${h.n>0?'text-green-600':'text-red-500'} font-bold">${h.n>0?'+':''}${h.n}</span> <span class="text-gray-500">${h.nota}</span></div><span class="text-xs text-gray-300">${new Date(h.f).toLocaleDateString('es-MX')}</span></div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 15 — INVENTARIO VENDEDOR
+// ══════════════════════════════════════════════════════════════
+function diasRest(exp){return Math.max(0,Math.floor((exp-Date.now())/864e5));}
+function estadoPub(p){
+  if(!p.visible||p.expira<Date.now())return'err';
+  return diasRest(p.expira)<=5?'warn':'ok';
+}
+async function renderInv(){
+  const mios=productos.filter(p=>p.vendedorId===usuario.id||(usuario.rol==='admin'));
+  const tbody=document.getElementById('inv-tbody'),cnt=document.getElementById('inv-count');
+  if(cnt)cnt.textContent=`${mios.length} publicaciones`;
+  if(!tbody)return;
+  if(!mios.length){tbody.innerHTML=`<tr><td colspan="6" class="text-center py-10 text-gray-400 text-sm">Sin publicaciones.</td></tr>`;return;}
+  tbody.innerHTML=mios.map(p=>{
+    const est=estadoPub(p);const dias=diasRest(p.expira);
+    const fexp=new Date(p.expira).toLocaleDateString('es-MX');
+    const eLabel={ok:'Activo',warn:'⚠ Próximo',err:'✗ Vencido'}[est];
+    const eCls={ok:'sok',warn:'swn',err:'ser'}[est];
+    return`<tr class="border-b border-gray-50 hover:bg-gray-50 text-sm">
+      <td class="p-3"><div class="flex items-center gap-2.5"><img src="${p.fotos?.[0]||''}" class="w-9 h-9 object-cover rounded-lg border border-gray-100 flex-shrink-0">
+        <div><span class="font-semibold text-gray-900 block">${p.titulo}</span>
+        <span class="text-xs text-gray-400">${p.negocio||p.vendedorNombre}</span></div></div></td>
+      <td class="p-3"><span class="text-xs font-bold px-2 py-0.5 rounded-lg ${eCls}">${eLabel}</span><div class="text-xs text-gray-400 mt-0.5">${fexp}</div></td>
+      <td class="p-3 text-center font-bold text-base ${dias<=5?'text-orange-500':'text-gray-700'}">${dias}d</td>
+      <td class="p-3 text-center font-bold text-blue-600 text-base">${p.stock}</td>
+      <td class="p-3 text-center font-bold text-green-600 text-base">${p.vendidos||0}</td>
+      <td class="p-3"><div class="flex items-center justify-center gap-1 flex-wrap">
+        ${est==='err'?`<button onclick="republicar('${p.id}')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg text-xs font-bold"><i class="fa-solid fa-rotate-right mr-1"></i>Republicar</button>`:
+          `<button onclick="pausar('${p.id}')" class="bg-gray-50 text-gray-600 hover:bg-gray-100 p-2 rounded-lg text-xs" title="${p.pausado?'Reactivar':'Pausar'}"><i class="fa-solid fa-${p.pausado?'play':'pause'}"></i></button>`}
+        <button onclick="duplicar('${p.id}')" class="bg-purple-50 text-purple-600 hover:bg-purple-100 p-2 rounded-lg text-xs" title="Duplicar"><i class="fa-solid fa-copy"></i></button>
+        <button onclick="marcarAgotado('${p.id}')" class="bg-orange-50 text-orange-600 hover:bg-orange-100 p-2 rounded-lg text-xs" title="Agotar"><i class="fa-solid fa-ban"></i></button>
+        <button onclick="delProd('${p.id}')" class="bg-red-50 text-red-500 hover:bg-red-100 p-2 rounded-lg text-xs" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+async function republicar(id){
+  showLoad('Verificando créditos...');
+  const u=await fbGetUser(usuario.id);hideLoad();
+  if(!u||u.creditos<10){toast('Necesitas 10 créditos para republicar','err');tabV('cred');return;}
+  const p=productos.find(x=>String(x.id)===String(id));if(!p)return;
+  p.visible=true;p.expira=Date.now()+30*864e5;p.pausado=false;
+  const histCred=[{t:'pub',n:-10,f:Date.now(),nota:`Republicación: "${p.titulo}"`},...(u.histCred||[])];
+  await fbSaveProducto({id:p.id,visible:true,expira:p.expira,pausado:false});
+  await fbSaveUser({id:usuario.id,creditos:u.creditos-10,histCred});
+  usuario.creditos=u.creditos-10;updateCredDisplay();renderInv();
+  toast('¡Republicado por 30 días más!');
+}
+async function pausar(id){
+  const p=productos.find(x=>String(x.id)===String(id));if(!p)return;
+  p.pausado=!p.pausado;
+  await fbSaveProducto({id:p.id,pausado:p.pausado});
+  renderInv();toast(p.pausado?'Publicación pausada':'Publicación reactivada');
+}
+async function duplicar(id){
+  const p=productos.find(x=>String(x.id)===String(id));if(!p)return;
+  const c={...JSON.parse(JSON.stringify(p)),id:Date.now().toString(),titulo:`${p.titulo} (Copia)`,visible:false,vendidos:0,comentarios:[],createdAt:Date.now()};
+  await fbSaveProducto(c);productos.unshift(c);renderInv();
+  toast('Duplicado (inactivo). Edítalo y republica.');
+}
+async function marcarAgotado(id){
+  const p=productos.find(x=>String(x.id)===String(id));if(!p)return;
+  p.stock=0;await fbSaveProducto({id:p.id,stock:0});renderInv();applyFilters();
+  toast('Marcado como agotado');
+}
+async function delProd(id){
+  if(!confirm('¿Eliminar esta publicación?'))return;
+  await fbDeleteProducto(id);
+  productos=productos.filter(x=>String(x.id)!==String(id));
+  renderInv();applyFilters();toast('Publicación eliminada');
+}
+function renderUltimasPubs(){
+  const c=document.getElementById('ultimas-pubs');if(!c)return;
+  const mios=productos.filter(p=>p.vendedorId===usuario.id).slice(0,3);
+  if(!mios.length){c.innerHTML=`<p class="text-sm text-gray-400 text-center py-4">Sin publicaciones aún.</p>`;return;}
+  const eLabel={ok:'Activo',warn:'Próximo a vencer',err:'Vencido'};
+  const eCls={ok:'sok',warn:'swn',err:'ser'};
+  c.innerHTML=mios.map(p=>{
+    const est=estadoPub(p);const dias=diasRest(p.expira);
+    return`<div class="flex gap-2.5 bg-gray-50 rounded-xl p-3 border border-gray-100"><img src="${p.fotos?.[0]||''}" class="w-12 h-12 object-cover rounded-xl flex-shrink-0">
+    <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">${p.titulo}</p>
+    <p class="text-xs text-gray-400">$${p.precioFinal.toLocaleString('es-MX')} · Stock: ${p.stock}</p>
+    <div class="flex items-center gap-2 mt-1"><span class="text-xs font-bold px-1.5 py-0.5 rounded-lg ${eCls[est]}">${eLabel[est]}</span>${est!=='err'?`<span class="text-xs text-gray-400">${dias}d restantes</span>`:''}</div></div></div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 16 — MÉTRICAS Y REPUTACIÓN
+// ══════════════════════════════════════════════════════════════
+function renderMetricas(){
+  const mp=productos.filter(p=>p.vendedorId===usuario.id);
+  document.getElementById('m-viz').textContent=mp.reduce((s,p)=>s+(p.viz||0),0);
+  document.getElementById('m-wa').textContent=mp.reduce((s,p)=>s+(p.cliWA||0),0);
+  document.getElementById('m-vend').textContent=mp.reduce((s,p)=>s+(p.vendidos||0),0);
+  document.getElementById('m-act').textContent=mp.filter(p=>estadoPub(p)==='ok').length;
+  const det=document.getElementById('m-estados');
+  if(det)det.innerHTML=[['ok','Activos','bg-green-400'],['warn','Próximos a vencer','bg-yellow-400'],['err','Vencidos','bg-red-400']].map(([e,l,c])=>{
+    const n=mp.filter(p=>estadoPub(p)===e).length;
+    return`<div class="flex justify-between items-center text-sm py-2 border-b border-gray-50 last:border-0"><span class="flex items-center gap-2"><span class="w-2.5 h-2.5 ${c} rounded-full"></span>${l}</span><strong>${n}</strong></div>`;
+  }).join('');
+}
+function renderReputacion(){
+  const mp=productos.filter(p=>p.vendedorId===usuario.id);
+  let all=[];mp.forEach(p=>{if(p.comentarios)all=all.concat(p.comentarios.map(c=>({...c,prod:p.titulo})));});
+  const vend=mp.reduce((s,p)=>s+(p.vendidos||0),0);
+  const prom=all.length?(all.reduce((s,c)=>s+(c.stars||0),0)/all.length).toFixed(1):'5.0';
+  document.getElementById('rep-avg').textContent=prom;
+  document.getElementById('rep-ventas').textContent=vend;
+  document.getElementById('rep-res').textContent=all.length;
+  const sd=document.getElementById('rep-stars');
+  if(sd)sd.innerHTML=Array.from({length:5},(_,i)=>`<i class="fa-solid fa-star text-sm ${i<Math.round(parseFloat(prom))?'text-yellow-400':'text-gray-200'}"></i>`).join('');
+  const rl=document.getElementById('rep-list');
+  if(rl){
+    if(!all.length){rl.innerHTML=`<p class="text-sm text-gray-400 text-center py-6">Sin reseñas aún.</p>`;return;}
+    rl.innerHTML=all.slice(0,5).map(c=>`<div class="bg-gray-50 rounded-xl p-3.5 border border-gray-100"><div class="flex justify-between text-sm mb-1"><span class="font-bold text-gray-900">${c.nombre}</span><span class="text-xs text-blue-600 truncate max-w-[130px]">${c.prod}</span></div><div class="flex gap-0.5 mb-1">${Array.from({length:5},(_,i)=>`<i class="fa-solid fa-star text-xs ${i<(c.stars||0)?'text-yellow-400':'text-gray-200'}"></i>`).join('')}</div><p class="text-sm text-gray-600">${c.texto}</p></div>`).join('');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 17 — TABS VENDEDOR
+// ══════════════════════════════════════════════════════════════
+function tabV(t){
+  ['pub','inv','met','cred','rep'].forEach(x=>{
+    document.getElementById('vt-'+x)?.classList.add('hidden');
+    const b=document.getElementById('vtab-'+x);if(b){b.classList.remove('ton','text-blue-600');b.classList.add('text-gray-500');}
+  });
+  document.getElementById('vt-'+t)?.classList.remove('hidden');
+  const ba=document.getElementById('vtab-'+t);if(ba){ba.classList.add('ton','text-blue-600');ba.classList.remove('text-gray-500');}
+  if(t==='pub'){buildPubCatSelect();renderUltimasPubs();checkDraftsBanner();}
+  if(t==='inv')renderInv();
+  if(t==='met')renderMetricas();
+  if(t==='cred')updateCredDisplay();
+  if(t==='rep')renderReputacion();
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 18 — PERFIL
+// ══════════════════════════════════════════════════════════════
+async function savePerfil(){
+  const n=document.getElementById('pf-nom').value.trim();
+  const tel=document.getElementById('pf-tel').value.trim();
+  const p=document.getElementById('pf-pass').value;
+  if(!n){toast('El nombre no puede estar vacío','err');return;}
+  if(tel&&!/^[0-9]{10}$/.test(tel)){toast('Teléfono debe tener 10 dígitos','err');return;}
+  showLoad('Guardando perfil...');
+  try{
+    await fbSaveUser({id:usuario.id,nombre:n,tel:tel||usuario.tel||''});
+    // Cambiar contraseña solo en modo Firebase
+    if(MODO_FIREBASE&&p&&p.length>=6&&auth.currentUser){
+      await auth.currentUser.updatePassword(p);
+    } else if(!MODO_FIREBASE&&p&&p.length>=6){
+      // Modo local: actualizar contraseña en localStorage
+      let users=lsGetUsers();const u=users.find(x=>x.id===usuario.id);
+      if(u){u.password=p;lsSaveUsers(users);}
+    }
+    usuario.nombre=n;usuario.tel=tel;setupUI();
+    hideLoad();toast('Perfil actualizado');
+  }catch(e){hideLoad();toast('Error: '+e.message,'err');}
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 19 — PANEL ADMIN (datos desde Firestore)
+// ══════════════════════════════════════════════════════════════
+async function loadAdmin(){
+  showLoad('Cargando panel admin...');
+  const [todos,usrs]=await Promise.all([fbGetProductos(),fbGetAllUsers()]);
+  hideLoad();
+  // Refrescar array global
+  productos=todos;checkExpiry();
+  document.getElementById('adm-u').textContent=usrs.length;
+  document.getElementById('adm-p').textContent=todos.length;
+  document.getElementById('adm-v').textContent=todos.reduce((s,p)=>s+(p.vendidos||0),0);
+  document.getElementById('adm-c').textContent=usrs.reduce((s,u)=>s+(u.creditos||0),0);
+  tabA('usr',usrs,todos);
+}
+function tabA(t,usrsPre,prodsPre){
+  ['usr','pub','cat','mod'].forEach(x=>{
+    document.getElementById('at-'+x)?.classList.add('hidden');
+    const b=document.getElementById('atab-'+x);if(b){b.classList.remove('ton','text-blue-600');b.classList.add('text-gray-500');}
+  });
+  document.getElementById('at-'+t)?.classList.remove('hidden');
+  const ba=document.getElementById('atab-'+t);if(ba){ba.classList.add('ton','text-blue-600');ba.classList.remove('text-gray-500');}
+  if(t==='usr')renderAdmUsers(usrsPre);
+  if(t==='pub')renderAdmPubs(prodsPre);
+  if(t==='cat')renderAdmCats();
+  if(t==='mod')renderAdmMod();
+}
+function renderAdmUsers(usrs){
+  const tbody=document.getElementById('adm-u-tbody');if(!tbody)return;
+  if(!usrs){fbGetAllUsers().then(u=>renderAdmUsers(u));return;}
+  tbody.innerHTML=usrs.map(u=>{
+    const cnt=productos.filter(p=>p.vendedorId===u.id).length;
+    const rc={admin:'bg-red-100 text-red-700',vendedor:'bg-blue-100 text-blue-700',cliente:'bg-gray-100 text-gray-600'}[u.rol]||'bg-gray-100 text-gray-600';
+    return`<tr class="border-b border-gray-50 hover:bg-gray-50 text-sm">
+      <td class="p-3"><div class="font-semibold text-gray-900">${u.nombre}</div><div class="text-xs text-gray-400">${u.email}</div></td>
+      <td class="p-3"><span class="text-xs font-bold px-2 py-0.5 rounded-lg ${rc}">${u.rol}</span></td>
+      <td class="p-3 text-center text-xs text-gray-500">${u.tel||'—'}</td>
+      <td class="p-3 text-center font-bold text-yellow-600">${u.creditos||0}</td>
+      <td class="p-3 text-center"><button onclick="admDelUser('${u.id}')" ${u.id===usuario.id?'disabled':''} class="text-red-400 hover:text-red-600 disabled:opacity-30 p-1"><i class="fa-solid fa-trash text-sm"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+function renderAdmPubs(prods){
+  const tbody=document.getElementById('adm-p-tbody');if(!tbody)return;
+  const lista=prods||productos;
+  tbody.innerHTML=lista.map(p=>{
+    const est=estadoPub(p);
+    const eCls={ok:'sok',warn:'swn',err:'ser'}[est];
+    const eLabel={ok:'Activo',warn:'Próximo',err:'Vencido'}[est];
+    return`<tr class="border-b border-gray-50 hover:bg-gray-50 text-sm">
+      <td class="p-3 font-semibold text-gray-900 max-w-[140px]"><span class="truncate block">${p.titulo}</span></td>
+      <td class="p-3 text-xs text-gray-500">${p.negocio||p.vendedorNombre}</td>
+      <td class="p-3 text-center"><span class="text-xs font-bold px-2 py-0.5 rounded-lg ${eCls}">${eLabel}</span></td>
+      <td class="p-3 text-center font-bold">$${(p.precioFinal||0).toLocaleString('es-MX')}</td>
+      <td class="p-3 text-center"><button onclick="admDelPub('${p.id}')" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-trash text-sm"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+function renderAdmCats(){
+  const lista=document.getElementById('adm-cats-list');if(!lista)return;
+  lista.innerHTML=CATS_ACTIVAS.map((c,i)=>`
+    <div class="border border-gray-200 rounded-xl overflow-hidden">
+      <div class="flex items-center justify-between bg-gray-50 px-3 py-2.5 cursor-pointer select-none" onclick="toggleCatDet('acd-${i}')">
+        <div class="flex items-center gap-2"><i class="fa-solid ${c.icon||'fa-tag'} text-blue-500 text-sm w-5 text-center"></i><span class="text-sm font-bold text-gray-900">${c.nombre}</span><span class="text-xs text-gray-400">${(c.subs||[]).length} subcats</span></div>
+        <div class="flex items-center gap-2">
+          ${i>=12?`<button onclick="event.stopPropagation();admDelCat(${i})" class="text-red-400 hover:text-red-600 p-0.5"><i class="fa-solid fa-times text-xs"></i></button>`:'<span class="text-[10px] text-gray-300">base</span>'}
+          <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+        </div>
+      </div>
+      <div id="acd-${i}" class="hidden px-3 py-2.5 space-y-2 border-t border-gray-100 fi">
+        <div class="flex flex-wrap gap-1.5">${(c.subs||[]).map((s,si)=>`<span class="chip text-xs">${s} <button onclick="admDelSub(${i},${si})" class="text-red-400 ml-0.5 text-xs font-black">×</button></span>`).join('')}</div>
+        <div class="flex gap-2"><input type="text" id="snew-${i}" placeholder="Nueva subcategoría" class="inf text-sm flex-1"><button onclick="admAddSub(${i})" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-blue-700">+ Sub</button></div>
+      </div>
+    </div>`).join('');
+}
+function toggleCatDet(id){document.getElementById(id)?.classList.toggle('hidden');}
+async function addCatAdmin(){
+  const inp=document.getElementById('adm-nueva-cat');const n=inp.value.trim();if(!n)return;
+  if(CATS_ACTIVAS.find(c=>c.nombre.toLowerCase()===n.toLowerCase())){toast('Categoría ya existe','err');return;}
+  CATS_ACTIVAS.push({id:n.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''),nombre:n,icon:'fa-tag',subs:[],attrs:[]});
+  await fbSaveCats(CATS_ACTIVAS);
+  renderAdmCats();buildCatChips();buildPubCatSelect();inp.value='';toast(`Categoría "${n}" creada`);
+}
+async function admDelCat(i){
+  if(!confirm('¿Eliminar esta categoría?'))return;
+  CATS_ACTIVAS.splice(i,1);await fbSaveCats(CATS_ACTIVAS);
+  renderAdmCats();buildCatChips();buildPubCatSelect();toast('Categoría eliminada');
+}
+async function admAddSub(ci){
+  const inp=document.getElementById('snew-'+ci);const s=inp.value.trim();if(!s)return;
+  CATS_ACTIVAS[ci].subs=CATS_ACTIVAS[ci].subs||[];CATS_ACTIVAS[ci].subs.push(s);
+  await fbSaveCats(CATS_ACTIVAS);inp.value='';renderAdmCats();
+  if(catActual===CATS_ACTIVAS[ci].id)buildSubFilter();
+  toast(`Subcategoría "${s}" agregada`);
+}
+async function admDelSub(ci,si){
+  CATS_ACTIVAS[ci].subs.splice(si,1);await fbSaveCats(CATS_ACTIVAS);renderAdmCats();
+}
+function renderAdmMod(){
+  const cont=document.getElementById('adm-mod-list');if(!cont)return;
+  let all=[];productos.forEach(p=>{if(p.comentarios)p.comentarios.forEach((c,ci)=>all.push({...c,pId:p.id,pTit:p.titulo,ci}));});
+  if(!all.length){cont.innerHTML=`<p class="text-sm text-gray-400 text-center py-6">Sin reseñas para moderar.</p>`;return;}
+  cont.innerHTML=all.slice(0,20).map(c=>`<div class="flex justify-between items-start bg-gray-50 rounded-xl p-3.5 border border-gray-100">
+    <div class="flex-1 min-w-0"><div class="flex gap-2 mb-1 flex-wrap"><span class="text-sm font-bold text-gray-900">${c.nombre}</span><span class="text-xs text-blue-600 truncate">${c.pTit}</span></div><p class="text-sm text-gray-600">${c.texto}</p></div>
+    <button onclick="admDelResena('${c.pId}',${c.ci})" class="text-red-400 hover:text-red-600 p-1 ml-2"><i class="fa-solid fa-trash text-sm"></i></button>
+  </div>`).join('');
+}
+async function admDelUser(uid){
+  if(!confirm('¿Eliminar usuario?'))return;
+  await db.collection('usuarios').doc(uid).delete();
+  toast('Usuario eliminado');loadAdmin();
+}
+async function admDelPub(id){
+  if(!confirm('¿Eliminar publicación?'))return;
+  await fbDeleteProducto(id);
+  productos=productos.filter(x=>String(x.id)!==String(id));
+  renderAdmPubs();applyFilters();toast('Publicación eliminada');
+}
+async function admDelResena(pId,ci){
+  const p=productos.find(x=>String(x.id)===String(pId));
+  if(p?.comentarios){p.comentarios.splice(ci,1);await fbSaveProducto({id:p.id,comentarios:p.comentarios});renderAdmMod();toast('Reseña eliminada');}
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 20 — UTILS: MENÚ USUARIO Y TOAST
+// ══════════════════════════════════════════════════════════════
+function toggleUserMenu(forceClose){
+  const m=document.getElementById('user-menu');
+  if(forceClose===false||!m.classList.contains('hidden'))m.classList.add('hidden');
+  else m.classList.remove('hidden');
+}
+let toastT;
+function toast(msg,tipo='ok'){
+  const el=document.getElementById('toast');if(!el)return;
+  document.getElementById('ti').className=`${tipo==='err'?'bg-red-600':'bg-gray-900'} text-white text-sm font-semibold px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2`;
+  document.getElementById('t-ico').className=`fa-solid fa-${tipo==='err'?'circle-exclamation text-red-200':'check-circle text-green-400'}`;
+  document.getElementById('t-msg').textContent=msg;
+  el.classList.remove('hidden');clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.add('hidden'),2800);
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 21 — INICIALIZACIÓN ROBUSTA
+// Principio: login visible SIEMPRE desde el primer frame.
+// Firebase solo se activa en HTTPS y sin bloquear la pantalla.
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', ()=>{
+
+  // ── 1. Login visible de inmediato — SIEMPRE ────────────────
+  hideLoad();
+  document.getElementById('pantalla-auth').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+
+  // ── 2. Configurar event listeners ─────────────────────────
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape'){ closeCart(); closeDrafts(); cancelarVenta();
+      document.getElementById('user-menu')?.classList.add('hidden'); }
+  });
+  document.addEventListener('click', e=>{
+    if(!document.getElementById('avatar-wrap')?.contains(e.target))
+      document.getElementById('user-menu')?.classList.add('hidden');
+  });
+  document.getElementById('modal-cart')?.addEventListener('click', e=>{
+    if(e.target===document.getElementById('modal-cart')) closeCart();
+  });
+  document.getElementById('modal-drafts')?.addEventListener('click', e=>{
+    if(e.target===document.getElementById('modal-drafts')) closeDrafts();
+  });
+  document.getElementById('modal-venta')?.addEventListener('click', e=>{
+    if(e.target===document.getElementById('modal-venta')) cancelarVenta();
+  });
+  const qs = document.getElementById('q-desktop');
+  const qm = document.getElementById('q-mobile');
+  qs?.addEventListener('input', ()=>{ if(qm) qm.value=qs.value; });
+  qm?.addEventListener('input', ()=>{ if(qs) qs.value=qm.value; });
+  ['li-email','li-pass'].forEach(id=>
+    document.getElementById(id)?.addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); }));
+  ['rg-nombre','rg-email','rg-tel','rg-pass'].forEach(id=>
+    document.getElementById(id)?.addEventListener('keydown', e=>{ if(e.key==='Enter') doReg(); }));
+  document.getElementById('rc-email')?.addEventListener('keydown', e=>{
+    if(e.key==='Enter') doRecuperar();
+  });
+
+  // ── 3. Decidir modo: online (HTTPS + Firebase SDK) o local ─
+  const sdkOk = typeof firebase !== 'undefined';
+  const esHTTPS = location.protocol === 'https:';
+
+  if(sdkOk && esHTTPS){
+    // Modo ONLINE — Firebase disponible y protocolo seguro
+    try{
+      if(!fbApp){
+        fbApp = firebase.initializeApp(FB_CFG);
+        db    = firebase.firestore();
+        auth  = firebase.auth();
+        db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+      }
+      MODO_FIREBASE = true;
+      activarModoOnlineUI();
+      console.log('[EM V4] Firebase ✓ — modo online (HTTPS)');
+
+      // onAuthStateChanged: si ya había sesión activa, carga la app
+      // Si no, el login ya está visible — el usuario inicia sesión normal
+      auth.onAuthStateChanged(async firebaseUser => {
+        if(firebaseUser){
+          // Sesión activa: cargar app silenciosamente
+          await startApp(firebaseUser);
+        }
+        // firebaseUser===null → login ya visible, activar UI online
+      });
+
+    } catch(e){
+      console.error('[EM V4] Firebase init error:', e.message);
+      MODO_FIREBASE = false;
+      activarModoLocalUI();
+    }
+  } else {
+    // Modo LOCAL — file://, http://, QuickEdit, sin internet
+    MODO_FIREBASE = false;
+    activarModoLocalUI();
+    console.log('[EM V4] Modo local — protocolo:', location.protocol);
+    // Restaurar sesión local si existe
+    const ses = lsGetSes();
+    if(ses && ses.id && ses.email){
+      usuario = ses;
+      CATS_ACTIVAS = [...CATS_BASE];
+      productos = lsGetProductos();
+      checkExpiry();
+      setupUI();
+      favs = new Set((ses.favoritos||[]).map(String));
+      updateFavBadge();
+      buildCatChips();
+      document.getElementById('pantalla-auth').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      goTo('cat');
+    }
+  }
+});
+
+// ── Activar UI según modo ──────────────────────────────────────
+function activarModoLocalUI(){
+  document.getElementById('demo-accounts-box')?.classList.remove('hidden');
+  document.getElementById('share-box')?.classList.add('hidden');
+  if(!document.getElementById('banner-local')){
+    const b = document.createElement('div');
+    b.id = 'banner-local';
+    b.className = 'w-full bg-amber-500 text-white text-xs font-bold text-center py-2 px-3 flex items-center justify-center gap-2';
+    b.innerHTML = '<i class="fa-solid fa-wifi-slash"></i> Modo local — datos solo en este dispositivo';
+    const auth_el = document.getElementById('pantalla-auth');
+    if(auth_el) auth_el.prepend(b);
+  }
+}
+function activarModoOnlineUI(){
+  // share-box ya es visible por default; solo ocultar cuentas demo
+  document.getElementById('demo-accounts-box')?.classList.add('hidden');
+}
+</script>
+</body>
+</html>
