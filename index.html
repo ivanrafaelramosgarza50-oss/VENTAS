@@ -2715,31 +2715,30 @@ async function guardarConfigTienda(){
 // CRÉDITOS
 // ══════════════════════════════════════════════════════════════
 async function updateCredDisplay(){
-  const u=await fbGetUser(usuario.id);if(!u)return;
-  const n=u.creditos||0;usuario.creditos=n;
-  ['hdr-cred-n','cred-ring-n','pub-cred','cred-big'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=n;});
-  const ring=document.getElementById('cred-ring');if(ring)ring.style.strokeDashoffset=163-(163*n/100);
-  const bar=document.getElementById('cred-bar');if(bar)bar.style.width=`${n}%`;
+  const u=await fbGetUser(usuario.id);
+  if(!u)return;
+
+  const n=u.creditos||0;
+  usuario.creditos=n;
+
+  ['hdr-cred-n','cred-ring-n','pub-cred','cred-big']
+    .forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.textContent=n;
+    });
+
+  const ring=document.getElementById('cred-ring');
+  if(ring){
+    ring.style.strokeDashoffset=163-(163*n/300);
+  }
+
+  const bar=document.getElementById('cred-bar');
+  if(bar){
+    const porcentaje=(n/300)*100;
+    bar.style.width=`${porcentaje}%`;
+  }
+
   renderCredHist(u.histCred||[]);
-}
-async function addCredits(n){
-  const u=await fbGetUser(usuario.id);if(!u)return;
-  const nuevo=Math.min(u.creditos+n,300);const real=nuevo-u.creditos;
-  if(!real){toast('Ya tienes 100 créditos (máximo)','err');return;}
-  const histCred=[{t:'recarga',n:real,f:Date.now(),nota:`Recarga +${real} créditos`},...(u.histCred||[])];
-  await fbSaveUser({id:usuario.id,creditos:nuevo,histCred});
-  usuario.creditos=nuevo;updateCredDisplay();
-  toast(`+${real} créditos agregados`);
-}
-function renderCredHist(hist){
-  const c=document.getElementById('cred-hist');if(!c)return;
-  if(!hist?.length){c.innerHTML=`<p class="text-sm text-center py-4" style="color:var(--muted)">Sin movimientos.</p>`;return;}
-  c.innerHTML=hist.slice(0,10).map(h=>`
-    <div class="flex justify-between items-center py-2 text-sm" style="border-bottom:1px solid var(--border)">
-      <div><span class="font-bold" style="color:${h.n>0?'#4ade80':'var(--red)'}">${h.n>0?'+':''}${h.n}</span>
-        <span class="ml-1" style="color:var(--muted)">${h.nota}</span></div>
-      <span class="text-xs" style="color:#4b5563">${new Date(h.f).toLocaleDateString('es-MX')}</span>
-    </div>`).join('');
 }
 
 // ══════════════════════════════════════════════════════════════
